@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Env — jamais commiter les secrets
+.env.local
+.env*.local
+
+# Divers
+.DS_Store
+*.log
+.vercel
