@@ -287,6 +287,19 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   min-height: 15px;
   margin-top: 2px;
 }
+.bot-chip {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 5px;
+  font-family: 'Cinzel', serif;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--blue);
+  border: 1px solid rgba(79, 195, 247, .4);
+  border-radius: 5px;
+  vertical-align: middle;
+}
+
 .vote-badge {
   display: inline-block;
   background: rgba(139, 26, 26, .25);

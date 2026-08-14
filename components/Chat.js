@@ -54,6 +54,7 @@ export default function Chat({ messages, available, canWrite, onSend }) {
         {visible.map((m, i) => (
           <div key={i} className={`chat-msg ${m.channel}`}>
             <span className="author">{m.username}</span>
+            {m.isBot && <span className="bot-chip">BOT</span>}
             {m.ts && (
               <span className="time">
                 {new Date(m.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

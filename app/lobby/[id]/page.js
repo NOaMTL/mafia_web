@@ -98,7 +98,10 @@ export default function LobbyWait() {
                     ? <img src={url} alt="" />
                     : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
                 </div>
-                <div className="name">{p.username}</div>
+                <div className="name">
+                  {p.username}
+                  {p.isBot && <span className="bot-chip">BOT</span>}
+                </div>
                 <div className="sub" style={{ color: p.isReady ? 'var(--green)' : undefined }}>
                   {p.isReady ? '✓ Prêt' : 'En attente'}
                 </div>

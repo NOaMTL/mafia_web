@@ -26,21 +26,26 @@ const PHASE_LABELS = {
 const ROLE_LABELS = {
   VILLAGER: 'Villageois', MAFIA: 'Mafioso', DETECTIVE: 'Détective',
   DOCTOR: 'Médecin', MEDIUM: 'Médium', VIGILANTE: 'Vigilante',
+  GODFATHER: 'Parrain', ESCORT: 'Escorte', CONSIGLIERE: 'Consigliere',
 };
 
 const ROLE_EMOJI = {
   VILLAGER: '🏘️', MAFIA: '🔪', DETECTIVE: '🔍',
   DOCTOR: '⚕️', MEDIUM: '🔮', VIGILANTE: '⚖️',
+  GODFATHER: '🎩', ESCORT: '💃', CONSIGLIERE: '🕵️',
 };
 
 const NIGHT_PROMPTS = {
-  MAFIA:     'Choisissez votre victime.',
-  DETECTIVE: 'Choisissez un joueur à sonder.',
-  DOCTOR:    'Choisissez un joueur à protéger.',
-  VIGILANTE: 'Choisissez une cible… ou personne.',
+  MAFIA:       'Choisissez votre victime.',
+  GODFATHER:   'Ordonnez l\'assassinat — votre voix compte double.',
+  DETECTIVE:   'Choisissez un joueur à sonder.',
+  CONSIGLIERE: 'Choisissez un joueur — son rôle exact vous sera révélé.',
+  DOCTOR:      'Choisissez un joueur à protéger.',
+  VIGILANTE:   'Choisissez une cible… ou personne.',
+  ESCORT:      'Choisissez un joueur à distraire — son action sera annulée.',
 };
 
-const NIGHT_ACTION_ROLES = ['MAFIA', 'DETECTIVE', 'DOCTOR', 'VIGILANTE'];
+const NIGHT_ACTION_ROLES = ['MAFIA', 'GODFATHER', 'DETECTIVE', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT'];
 const DAY_PHASES = ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL', 'JUDGMENT', 'SENTENCE'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -154,7 +159,8 @@ export default function GamePage() {
     const onAcquit   = ()  => { setSentence({ type: 'acquitted' }); addLog('🕊️', 'Accusé acquitté.'); };
     const onOver     = (d) => setWinner(d);
     const onRewards  = (d) => setRewards(d);
-    const onDet      = (d) => setDetective(d);
+    const onDet      = (d) => setDetective({ ...d, kind: 'team' });
+    const onCons     = (d) => setDetective({ ...d, kind: 'role' });
     const onActionOk = ()  => setActionConfirmed(true);
     const onSkip     = (d) => setSkipInfo(d);
     const onChat     = (m) => setChatMessages((prev) => [...prev.slice(-199), m]);
@@ -184,6 +190,7 @@ export default function GamePage() {
     socket.on('game:over',                onOver);
     socket.on('game:rewards',             onRewards);
     socket.on('night:detective_result',   onDet);
+    socket.on('night:consigliere_result', onCons);
     socket.on('night:action_received',    onActionOk);
     socket.on('night:result',             onNightRes);
     socket.on('night:you_were_saved',     onSaved);
@@ -201,7 +208,7 @@ export default function GamePage() {
       ['game:sync', 'phase:start', 'game:public_state', 'game:role_assigned',
        'vote:update', 'gazette:published', 'trial:started', 'judgment:voted',
        'sentence:executed', 'sentence:acquitted', 'game:over', 'game:rewards',
-       'night:detective_result', 'night:action_received', 'night:result',
+       'night:detective_result', 'night:consigliere_result', 'night:action_received', 'night:result',
        'night:you_were_saved', 'night:doctor_saved', 'phase:skip_votes_updated',
        'game:player_disconnected', 'game:player_reconnected', 'chat:message',
       ].forEach((e) => socket.off(e));
@@ -423,13 +430,24 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* Detective result */}
+          {/* Investigation result (Detective or Consigliere) */}
           {detective && (
             <div className="gazette-entry info">
-              🔍 Votre enquête : <b>{detective.targetUsername}</b> est du camp{' '}
-              <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
-                {detective.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
-              </b>
+              {detective.kind === 'role' ? (
+                <>
+                  🕵️ Votre enquête : <b>{detective.targetUsername}</b> est{' '}
+                  <b style={{ color: 'var(--gold-hi)' }}>
+                    {ROLE_LABELS[detective.role] ?? detective.role}
+                  </b>
+                </>
+              ) : (
+                <>
+                  🔍 Votre enquête : <b>{detective.targetUsername}</b> est du camp{' '}
+                  <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
+                    {detective.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
+                  </b>
+                </>
+              )}
             </div>
           )}
 
@@ -514,6 +532,7 @@ export default function GamePage() {
                   <div className="name">
                     {p.username}
                     {p.userId === session.userId ? ' (vous)' : ''}
+                    {p.isBot && <span className="bot-chip">BOT</span>}
                     {isOffline ? ' 📡' : ''}
                   </div>
                   <div className="sub">
