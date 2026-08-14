@@ -15,7 +15,10 @@ export default function LobbyWait() {
   const [error, setError]     = useState('');
   const [avatarMap, setAvatarMap] = useState({});
   const [copied, setCopied]   = useState(false);
+  const [chatMsgs, setChatMsgs] = useState([]);
+  const [chatText, setChatText] = useState('');
   const socketRef = useRef(null);
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     const s = getSession();
@@ -33,17 +36,34 @@ export default function LobbyWait() {
     socket.on('lobby:player_joined', refresh);
     socket.on('lobby:player_ready',  refresh);
     socket.on('lobby:bot_added',     refresh);
+    socket.on('lobby:chat_message',  (m) => setChatMsgs((p) => [...p.slice(-99), m]));
     socket.on('game:started',        (d) => router.push(`/game/${d.gameId}`));
     socket.on('error',               (d) => setError(d.message ?? 'Erreur'));
 
-    socket.emit('lobby:join', { lobbyId: id });
+    const join = () => socket.emit('lobby:join', { lobbyId: id });
+    socket.on('connect', join); // auto re-join on reconnection
+    join();
     refresh();
 
     return () => {
       ['lobby:joined', 'lobby:player_joined', 'lobby:player_ready',
-       'lobby:bot_added', 'game:started', 'error'].forEach((e) => socket.off(e));
+       'lobby:bot_added', 'lobby:chat_message', 'game:started', 'error',
+      ].forEach((e) => socket.off(e));
+      socket.off('connect', join);
     };
   }, [id, router]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMsgs.length]);
+
+  function sendChat(e) {
+    e.preventDefault();
+    const t = chatText.trim();
+    if (!t) return;
+    socketRef.current?.emit('lobby:chat', { lobbyId: id, message: t });
+    setChatText('');
+  }
 
   function toggleReady() {
     const next = !ready;
@@ -118,6 +138,34 @@ export default function LobbyWait() {
           </button>
           <button onClick={addBot}>+ BOT</button>
         </div>
+      </div>
+
+      {/* ── Lobby chat ── */}
+      <div className="card" style={{ marginTop: 16, padding: 14 }}>
+        <div className="cinzel" style={{ fontSize: 11, letterSpacing: 2,
+                                         color: 'var(--gold)', marginBottom: 8 }}>
+          💬 DISCUSSION
+        </div>
+        <div className="chat-messages" style={{ height: 160 }}>
+          {chatMsgs.length === 0 && (
+            <div className="dim" style={{ fontStyle: 'italic', fontSize: 13 }}>
+              Discutez en attendant les autres joueurs…
+            </div>
+          )}
+          {chatMsgs.map((m, i) => (
+            <div key={i} className="chat-msg">
+              <span className="author">{m.username}</span>
+              <div>{m.message}</div>
+            </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+        <form className="chat-input" onSubmit={sendChat}>
+          <input value={chatText} maxLength={300}
+                 placeholder="Votre message…"
+                 onChange={(e) => setChatText(e.target.value)} />
+          <button type="submit" disabled={!chatText.trim()}>➤</button>
+        </form>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { getAvatarMap } from '@/lib/avatars';
+import { sounds, isMuted, toggleMute } from '@/lib/sounds';
 import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
 
@@ -84,6 +85,8 @@ export default function GamePage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [notes, setNotes]         = useState({});     // userId → { text, suspicion }
   const [gameLog, setGameLog]     = useState([]);     // { icon, text, round }
+  const [muted, setMuted]         = useState(true);
+  useEffect(() => { setMuted(isMuted()); }, []);
 
   const socketRef = useRef(null);
   const toastId   = useRef(0);
@@ -128,7 +131,10 @@ export default function GamePage() {
         setNightTarget(null); setActionConfirmed(false);
         setDetective(null); setNightMsg('');
         addLog('🌙', `Début de la nuit ${d.round ?? ''}`);
+        sounds.night();
       }
+      if (d.phase === 'MORNING_GAZETTE') sounds.morning();
+      if (d.phase === 'TRIAL') sounds.gong();
       if (d.phase === 'DAY_DISCUSSION') addLog('💬', 'Le jour se lève — discussion.');
       if (d.phase === 'DAY_VOTE') { setMyVote(null); addLog('🗳️', 'Ouverture du vote.'); }
       if (d.phase === 'JUDGMENT') { setJudgment(null); setMyVerdict(null); }
@@ -155,15 +161,23 @@ export default function GamePage() {
     const onExec     = (d) => {
       setSentence({ type: 'executed', username: d.username, role: d.role, will: d.will });
       addLog('🔨', `${d.username} exécuté — ${d.role}`);
+      sounds.death();
     };
     const onAcquit   = ()  => { setSentence({ type: 'acquitted' }); addLog('🕊️', 'Accusé acquitté.'); };
-    const onOver     = (d) => setWinner(d);
+    const onOver     = (d) => {
+      setWinner(d);
+      const meP = d.players?.find((p) => p.userId === getSession()?.userId);
+      if (meP && d.winner === meP.team) sounds.victory(); else sounds.defeat();
+    };
     const onRewards  = (d) => setRewards(d);
     const onDet      = (d) => setDetective({ ...d, kind: 'team' });
     const onCons     = (d) => setDetective({ ...d, kind: 'role' });
     const onActionOk = ()  => setActionConfirmed(true);
     const onSkip     = (d) => setSkipInfo(d);
-    const onChat     = (m) => setChatMessages((prev) => [...prev.slice(-199), m]);
+    const onChat     = (m) => {
+      setChatMessages((prev) => [...prev.slice(-199), m]);
+      sounds.tick();
+    };
     const onSaved    = ()  => toast('⚕️ Vous avez été attaqué cette nuit… mais quelqu\'un vous a sauvé.');
     const onDocSaved = (d) => toast(`⚕️ Votre protection a sauvé ${d.savedUsername} cette nuit !`);
     const onDisc     = (d) => setOffline((o) => [...new Set([...o, d.userId])]);
@@ -202,6 +216,11 @@ export default function GamePage() {
 
     socket.emit('game:join', { gameId });
 
+    // Auto re-join after a socket reconnection (wifi blip, laptop sleep…):
+    // the server re-sends game:sync + our private role, play resumes seamlessly.
+    const onReconnect = () => socket.emit('game:join', { gameId });
+    socket.on('connect', onReconnect);
+
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(tick);
@@ -212,6 +231,7 @@ export default function GamePage() {
        'night:you_were_saved', 'night:doctor_saved', 'phase:skip_votes_updated',
        'game:player_disconnected', 'game:player_reconnected', 'chat:message',
       ].forEach((e) => socket.off(e));
+      socket.off('connect', onReconnect);
     };
   }, [gameId, router, toast, addLog]);
 
@@ -222,16 +242,21 @@ export default function GamePage() {
   const canActAtNight =
     phase === 'NIGHT' && isAlive && role && NIGHT_ACTION_ROLES.includes(role.role);
 
+  const isNightPhase = phase === 'NIGHT' || phase === 'NIGHT_RESOLVE';
+  const isMediumSeance = isAlive && role?.role === 'MEDIUM' && isNightPhase;
+
   const chatChannels = [];
   if (!isAlive) chatChannels.push('dead');
+  if (isMediumSeance) chatChannels.push('dead'); // séance spirite du Médium
   chatChannels.push('day');
-  if (isAlive && role?.team === 'MAFIA' && (phase === 'NIGHT' || phase === 'NIGHT_RESOLVE')) {
+  if (isAlive && role?.team === 'MAFIA' && isNightPhase) {
     chatChannels.unshift('mafia');
   }
   const canWrite =
     (!isAlive) ||
+    isMediumSeance ||
     (isAlive && DAY_PHASES.includes(phase)) ||
-    (isAlive && role?.team === 'MAFIA' && (phase === 'NIGHT' || phase === 'NIGHT_RESOLVE'));
+    (isAlive && role?.team === 'MAFIA' && isNightPhase);
 
   const remaining = endAt > now ? Math.round((endAt - now) / 1000) : 0;
   const duration  = endAt > startAt ? endAt - startAt : 1;
@@ -587,10 +612,15 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* Bottom actions: dossier + skip */}
+          {/* Bottom actions: dossier + son + skip */}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18 }}>
             <button style={{ fontSize: 11 }} onClick={() => setPanelOpen(true)}>
               📖 DOSSIER
+            </button>
+            <button style={{ fontSize: 11 }}
+                    title={muted ? 'Activer le son' : 'Couper le son'}
+                    onClick={() => setMuted(toggleMute())}>
+              {muted ? '🔇' : '🔊'}
             </button>
             {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
               <button style={{ fontSize: 11 }} onClick={() => send('phase:skip_vote', {})}>

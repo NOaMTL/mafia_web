@@ -84,11 +84,11 @@ body::after {
     rgba(6, 6, 10, 0.84) 70%,
     rgba(6, 6, 10, 0.95) 100%);
 }
-.ambiance-night  { background-image: url('/bg/nuit.png'); }
-.ambiance-day    { background-image: url('/bg/jour.png'); }
-.ambiance-danger { background-image: url('/bg/sentence.png'); }
-.ambiance-trial  { background-image: url('/bg/proces.png'); }
-.ambiance-home   { background-image: url('/bg/home.png'); }
+.ambiance-night  { background-image: url('/bg/nuit.webp'); }
+.ambiance-day    { background-image: url('/bg/jour.webp'); }
+.ambiance-danger { background-image: url('/bg/sentence.webp'); }
+.ambiance-trial  { background-image: url('/bg/proces.webp'); }
+.ambiance-home   { background-image: url('/bg/home.webp'); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPOGRAPHY & PRIMITIVES
@@ -376,8 +376,17 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   height: calc(100vh - 150px);
 }
 @media (max-width: 820px) {
+  .page { padding: 16px 12px; }
   .game-layout { grid-template-columns: 1fr; height: auto; }
   .chat { height: 340px; }
+  .players-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .player-tile { padding: 10px 6px 8px; }
+  .player-tile .avatar { width: 42px; height: 42px; }
+  .player-tile .name { font-size: 11px; }
+  .phase-banner .phase-name { font-size: 19px; letter-spacing: 3px; }
+  .role-reveal { margin: 20px auto; padding: 28px 20px; }
+  .nav-links a { padding: 7px 8px; font-size: 10px; }
+  .stats-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 .gazette-entry {

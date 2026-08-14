@@ -15,6 +15,7 @@ export default function NavHeader({ session, diamonds }) {
         <Link href="/lobby">JOUER</Link>
         <Link href="/profile">PROFIL</Link>
         <Link href="/shop">BOUTIQUE</Link>
+        <Link href="/leaderboard">CLASSEMENT</Link>
         <Link href="/guide">GUIDE</Link>
         {diamonds != null && (
           <span style={{ padding: '8px 12px', color: 'var(--blue)', fontSize: 13 }}>
