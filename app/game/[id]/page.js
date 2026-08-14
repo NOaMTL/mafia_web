@@ -619,6 +619,7 @@ export default function GamePage() {
               </div>
               {phase === 'JUDGMENT' && judgment ? (
                 <>
+
                   <div className="dim" style={{ fontSize: 13, marginBottom: 4 }}>
                     {trial?.accusedUsername} est accusé
                   </div>

@@ -143,7 +143,7 @@ function LogTab({ log }) {
     <div>
       {log.map((entry, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0',
-                              borderBottom: '1px solid rgba(255,255,255,.05)', fontSize: 14 }}>
+                              borderBottom: '1px solid var(--line)', fontSize: 14 }}>
           <span style={{ minWidth: 20 }}>{entry.icon}</span>
           <span style={{ flex: 1 }}>{entry.text}</span>
           <span className="dim" style={{ fontSize: 11 }}>T{entry.round}</span>
@@ -186,7 +186,7 @@ function RolesTab({ myRole }) {
                 </div>
               </div>
             </div>
-            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,.65)', lineHeight: 1.45 }}>
+            <p style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.45 }}>
               {r.description}
             </p>
             {r.nightAction && (

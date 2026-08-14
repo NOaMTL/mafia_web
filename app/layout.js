@@ -1,4 +1,5 @@
 import './globals.css';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export const metadata = {
   title: 'Mafia — Le jeu',
@@ -8,13 +9,20 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#0a0a0d',
+  themeColor: '#16161d',
 };
+
+// Applique le thème sauvegardé avant le premier rendu pour éviter un flash
+const themeInit = `try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}`;
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fr">
-      <body>{children}</body>
+    <html lang="fr" suppressHydrationWarning>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        {children}
+        <ThemeToggle />
+      </body>
     </html>
   );
 }
