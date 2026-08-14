@@ -38,11 +38,9 @@ export default function LeaderboardPage() {
       <PageHeading eyebrow="LES NOMS QUE LA VILLE N’OUBLIE PAS" title="CLASSEMENT"
                    subtitle="Les familles les plus redoutées de la ville." />
 
-      {rows === null && <p className="dim" style={{ textAlign: 'center' }}>Chargement…</p>}
+      {rows === null && <div className="meta-loading"><span /> Chargement du classement…</div>}
       {rows?.length === 0 && (
-        <p className="dim" style={{ textAlign: 'center' }}>
-          Aucune partie enregistrée pour l&apos;instant.
-        </p>
+        <div className="meta-empty"><strong>AUCUN DOSSIER CLASSÉ</strong><p>Les premières victoires apparaîtront ici.</p></div>
       )}
 
       {(rows ?? []).map((r) => {

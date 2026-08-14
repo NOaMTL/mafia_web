@@ -4,11 +4,16 @@ import { useState } from 'react';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
 
 const ROLE_LABELS = {
-  VILLAGER: 'Villageois', MAFIA: 'Mafioso', DETECTIVE: 'Détective',
-  DOCTOR: 'Médecin', MEDIUM: 'Médium', VIGILANTE: 'Vigilante',
+  CITIZEN: 'Citoyen', MAFIOSO: 'Mafioso', SHERIFF: 'Shérif', DETECTIVE: 'Détective',
+  INVESTIGATOR: 'Enquêteur', DOCTOR: 'Médecin', VIGILANTE: 'Vigilante',
+  GODFATHER: 'Parrain', ESCORT: 'Escorte', CONSIGLIERE: 'Consigliere',
+  BLACKMAILER: 'Maître chanteur', JANITOR: 'Janitor', FRAMER: 'Framer',
+  LOOKOUT: 'Guetteur', BODYGUARD: 'Garde du corps', CONSORT: 'Consort', MAYOR: 'Maire',
+  BUS_DRIVER: 'Chauffeur de bus', VETERAN: 'Vétéran', SPY: 'Espion',
 };
 
-const SUSPICIONS = ['?', 'VILLAGER', 'MAFIA', 'DETECTIVE', 'DOCTOR', 'MEDIUM', 'VIGILANTE'];
+const SUSPICIONS = ['?', 'TOWN', 'MAFIA', ...ROLE_GUIDE.map((role) => role.key)];
+const EVIDENCE_LABELS = { SUSPICION: 'Soupçon', CLAIM: 'Rôle revendiqué', OBSERVATION: 'Observation' };
 
 /**
  * DOSSIER DE PARTIE — fullscreen drawer, 4 tabs (parity with Flutter):
@@ -19,7 +24,8 @@ const SUSPICIONS = ['?', 'VILLAGER', 'MAFIA', 'DETECTIVE', 'DOCTOR', 'MEDIUM', '
  */
 export default function GamePanel({
   open, onClose, players, myId, myRole, round,
-  notes, setNotes, will, setWill, onSaveWill, log,
+  notes, onUpdateNote, evidence, onAddEvidence, onRemoveEvidence, canPublishEvidence,
+  will, setWill, onSaveWill, log,
 }) {
   const [tab, setTab] = useState(0);
 
@@ -46,18 +52,23 @@ export default function GamePanel({
         {/* ── Content ── */}
         <div className="panel-body">
           {tab === 0 && (
-            <PlayersTab players={players} myId={myId} notes={notes} setNotes={setNotes} />
+            <PlayersTab players={players} myId={myId} notes={notes} onUpdateNote={onUpdateNote} />
           )}
           {tab === 1 && (
-            <WillTab will={will} setWill={setWill} onSave={onSaveWill} />
+            <EvidenceTab
+              players={players} myId={myId} items={evidence}
+              onAdd={onAddEvidence} onRemove={onRemoveEvidence}
+              canPublish={canPublishEvidence}
+            />
           )}
-          {tab === 2 && <LogTab log={log} />}
-          {tab === 3 && <RolesTab myRole={myRole} />}
+          {tab === 2 && <WillTab will={will} setWill={setWill} onSave={onSaveWill} />}
+          {tab === 3 && <LogTab log={log} />}
+          {tab === 4 && <RolesTab myRole={myRole} />}
         </div>
 
         {/* ── Bottom nav ── */}
         <div className="panel-nav">
-          {['👥 JOUEURS', '📜 TESTAMENT', '🧾 JOURNAL', '📖 RÔLES'].map((label, i) => (
+          {['🕵️ CARNET', '🧷 PREUVES', '📜 TESTAMENT', '🧾 JOURNAL', '📖 RÔLES'].map((label, i) => (
             <button key={i}
                     className={tab === i ? 'active' : ''}
                     onClick={() => setTab(i)}>
@@ -72,9 +83,9 @@ export default function GamePanel({
 
 // ─── Tab: players + notes + suspicion ─────────────────────────────────────────
 
-function PlayersTab({ players, myId, notes, setNotes }) {
+function PlayersTab({ players, myId, notes, onUpdateNote }) {
   function update(userId, patch) {
-    setNotes((n) => ({ ...n, [userId]: { ...(n[userId] ?? {}), ...patch } }));
+    onUpdateNote(userId, { ...(notes[userId] ?? {}), ...patch });
   }
 
   return (
@@ -93,7 +104,7 @@ function PlayersTab({ players, myId, notes, setNotes }) {
                         onChange={(e) => update(p.userId, { suspicion: e.target.value })}>
                   {SUSPICIONS.map((s) => (
                     <option key={s} value={s}>
-                      {s === '?' ? 'Rôle ?' : ROLE_LABELS[s]}
+                      {s === '?' ? 'Rôle ?' : s === 'TOWN' ? 'Camp Town' : s === 'MAFIA' ? 'Camp Mafia' : ROLE_LABELS[s]}
                     </option>
                   ))}
                 </select>
@@ -110,6 +121,71 @@ function PlayersTab({ players, myId, notes, setNotes }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Tab: shared evidence board ──────────────────────────────────────────────
+
+function EvidenceTab({ players, myId, items, onAdd, onRemove, canPublish }) {
+  const [subjectId, setSubjectId] = useState(players.find((p) => p.userId !== myId)?.userId ?? '');
+  const [type, setType] = useState('SUSPICION');
+  const [text, setText] = useState('');
+
+  function publish() {
+    if (!subjectId || !text.trim()) return;
+    onAdd({ subjectId, type, text: text.trim() });
+    setText('');
+  }
+
+  const byNewest = [...(items ?? [])].sort((a, b) => b.createdAt - a.createdAt);
+  return (
+    <div className="evidence-board">
+      <div className="evidence-intro">
+        <span>TABLEAU COLLECTIF</span>
+        <p>Ces éléments sont publics. La Mafia peut mentir autant que le Village peut se tromper.</p>
+      </div>
+
+      {canPublish && (
+        <div className="evidence-composer">
+          <div className="evidence-fields">
+            <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+              {players.filter((p) => p.userId !== myId).map((p) => (
+                <option key={p.userId} value={p.userId}>{p.username}</option>
+              ))}
+            </select>
+            <select value={type} onChange={(e) => setType(e.target.value)}>
+              {Object.entries(EVIDENCE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </div>
+          <textarea
+            value={text}
+            maxLength={240}
+            placeholder="Décrivez un vote étrange, une contradiction ou un rôle revendiqué…"
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button className="primary" disabled={!text.trim()} onClick={publish}>ÉPINGLER LA PREUVE</button>
+        </div>
+      )}
+
+      <div className="evidence-list">
+        {byNewest.length === 0 && <p className="dim">Le tableau est encore vide.</p>}
+        {byNewest.map((item) => {
+          const subject = players.find((p) => p.userId === item.subjectId);
+          return (
+            <article key={item.id} className={`evidence-note type-${item.type.toLowerCase()}`}>
+              <div className="evidence-note-head">
+                <span>{EVIDENCE_LABELS[item.type]}</span><small>TOUR {item.round}</small>
+              </div>
+              <strong>{subject?.username ?? 'Joueur inconnu'}</strong>
+              <p>{item.text}</p>
+              <footer>Épinglé par {item.authorUsername}
+                {item.authorId === myId && <button onClick={() => onRemove(item.id)}>RETIRER</button>}
+              </footer>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }

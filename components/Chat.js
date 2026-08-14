@@ -17,6 +17,7 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
   const [tab, setTab]   = useState('day');
   const [text, setText] = useState('');
   const bottomRef       = useRef(null);
+  const mafiaWasAvailable = useRef(false);
 
   const tabs = [...available, 'sys'];
 
@@ -24,6 +25,12 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
     if (!tabs.includes(tab)) setTab(available[0] ?? 'day');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [available.join(','), tab]);
+
+  useEffect(() => {
+    const mafiaAvailable = available.includes('mafia');
+    if (mafiaAvailable && !mafiaWasAvailable.current) setTab('mafia');
+    mafiaWasAvailable.current = mafiaAvailable;
+  }, [available]);
 
   const visible = tab === 'sys' ? [] : messages.filter((m) => m.channel === tab);
 
@@ -43,7 +50,9 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
     <div className="chat panel-card" style={{ flex: 1, minHeight: 0 }}>
       <div className="chat-header">
         <span>CHAT</span>
-        <small>{canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}</small>
+        <small className={tab === 'mafia' ? 'private-channel' : ''}>
+          {tab === 'mafia' ? 'CANAL MAFIA · PRIVÉ' : canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}
+        </small>
       </div>
       <div className="chat-tabs">
         {tabs.map((ch) => (

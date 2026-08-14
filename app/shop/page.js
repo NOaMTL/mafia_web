@@ -113,7 +113,7 @@ export default function ShopPage() {
         })}
       </div>
 
-      {avatars.length === 0 && <p className="dim" style={{ textAlign: 'center' }}>Chargement…</p>}
+      {avatars.length === 0 && <div className="meta-loading"><span /> Ouverture de la boutique…</div>}
     </main>
   );
 }

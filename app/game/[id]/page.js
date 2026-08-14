@@ -25,29 +25,65 @@ const PHASE_LABELS = {
 };
 
 const ROLE_LABELS = {
-  VILLAGER: 'Villageois', MAFIA: 'Mafioso', DETECTIVE: 'Détective',
-  DOCTOR: 'Médecin', MEDIUM: 'Médium', VIGILANTE: 'Vigilante',
+  CITIZEN: 'Citoyen', MAFIOSO: 'Mafioso', SHERIFF: 'Shérif',
+  DETECTIVE: 'Détective', INVESTIGATOR: 'Enquêteur', DOCTOR: 'Médecin', VIGILANTE: 'Vigilante',
   GODFATHER: 'Parrain', ESCORT: 'Escorte', CONSIGLIERE: 'Consigliere',
+  BLACKMAILER: 'Maître chanteur', JANITOR: 'Janitor', FRAMER: 'Framer',
+  LOOKOUT: 'Guetteur', BODYGUARD: 'Garde du corps', CONSORT: 'Consort', MAYOR: 'Maire',
+  BUS_DRIVER: 'Chauffeur de bus', VETERAN: 'Vétéran', SPY: 'Espion',
 };
 
 const ROLE_EMOJI = {
-  VILLAGER: '🏘️', MAFIA: '🔪', DETECTIVE: '🔍',
-  DOCTOR: '⚕️', MEDIUM: '🔮', VIGILANTE: '⚖️',
+  CITIZEN: '🏘️', MAFIOSO: '🔪', SHERIFF: '⭐', DETECTIVE: '👣',
+  INVESTIGATOR: '🔎', DOCTOR: '⚕️', VIGILANTE: '🔫',
   GODFATHER: '🎩', ESCORT: '💃', CONSIGLIERE: '🕵️',
+  BLACKMAILER: '🤐', JANITOR: '🧹', FRAMER: '🖋️',
+  LOOKOUT: '👁️', BODYGUARD: '🛡️', CONSORT: '🥀', MAYOR: '🏛️',
+  BUS_DRIVER: '🚌', VETERAN: '🎖️', SPY: '📡',
 };
 
 const NIGHT_PROMPTS = {
-  MAFIA:       'Choisissez votre victime.',
+  MAFIOSO:     'Choisissez la victime de la famille.',
   GODFATHER:   'Ordonnez l\'assassinat — votre voix compte double.',
-  DETECTIVE:   'Choisissez un joueur à sonder.',
+  SHERIFF:     'Choisissez un joueur à interroger.',
+  DETECTIVE:   'Choisissez un joueur à suivre cette nuit.',
+  INVESTIGATOR:'Choisissez un joueur dont rechercher les crimes.',
   CONSIGLIERE: 'Choisissez un joueur — son rôle exact vous sera révélé.',
   DOCTOR:      'Choisissez un joueur à protéger.',
   VIGILANTE:   'Choisissez une cible… ou personne.',
   ESCORT:      'Choisissez un joueur à distraire — son action sera annulée.',
+  BLACKMAILER: 'Choisissez qui sera réduit au silence demain.',
+  JANITOR:     'Choisissez la victime dont les preuves devront disparaître.',
+  FRAMER:      'Choisissez un innocent à faire apparaître suspect.',
+  LOOKOUT:     'Choisissez un joueur à placer sous surveillance.',
+  BODYGUARD:   'Choisissez la personne pour laquelle vous risquerez votre vie.',
+  CONSORT:     'Choisissez un joueur dont vous bloquerez l’action.',
 };
 
-const NIGHT_ACTION_ROLES = ['MAFIA', 'GODFATHER', 'DETECTIVE', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT'];
+const NIGHT_ACTION_ROLES = ['MAFIOSO', 'GODFATHER', 'SHERIFF', 'DETECTIVE', 'INVESTIGATOR', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT', 'BLACKMAILER', 'JANITOR', 'FRAMER', 'LOOKOUT', 'BODYGUARD', 'CONSORT'];
 const DAY_PHASES = ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL', 'JUDGMENT', 'SENTENCE'];
+
+const ROLE_NIGHT_SCENES = {
+  CITIZEN:      { accent: '#9a8f7d', icon: '🏘️', set: 'alley', title: 'LA VILLE DORT', action: 'OBSERVER', copy: 'Tu n’as pas d’action nocturne. Prépare tes déductions pour le lever du jour.' },
+  SHERIFF:      { accent: '#d5a548', icon: '⭐', set: 'sheriff', title: 'INTERROGATOIRE', action: 'INTERROGER', copy: 'Choisis un joueur. Tu apprendras s’il paraît suspect.' },
+  INVESTIGATOR: { accent: '#4cb889', icon: '🔎', set: 'evidence', title: 'LABORATOIRE CRIMINEL', action: 'RECHERCHER LES CRIMES', copy: 'Examine les traces laissées par un joueur pendant la nuit.' },
+  DETECTIVE:    { accent: '#4f94d8', icon: '👣', set: 'evidence', title: 'FILATURE', action: 'SUIVRE CE JOUEUR', copy: 'Suis une cible et découvre où elle se rend cette nuit.' },
+  LOOKOUT:      { accent: '#69a5cf', icon: '👁️', set: 'window', title: 'SURVEILLANCE', action: 'PLACER SOUS SURVEILLANCE', copy: 'Observe une maison et relève l’identité de tous ses visiteurs.' },
+  DOCTOR:       { accent: '#68b84d', icon: '⚕️', set: 'clinic', title: 'GARDE DE NUIT', action: 'PROTÉGER CE JOUEUR', copy: 'Choisis la personne qui recevra tes soins cette nuit.' },
+  BODYGUARD:    { accent: '#54a875', icon: '🛡️', set: 'guard', title: 'SOUS PROTECTION', action: 'MONTER LA GARDE', copy: 'Intercepte l’attaque visant la personne que tu protèges.' },
+  ESCORT:       { accent: '#d15f91', icon: '💃', set: 'club', title: 'DISTRACTION', action: 'DISTRAIRE', copy: 'Empêche une cible d’accomplir son action nocturne.' },
+  VIGILANTE:    { accent: '#cf8138', icon: '🔫', set: 'armory', title: 'JUSTICE NOCTURNE', action: 'TIRER', copy: 'Une balle peut sauver la ville — ou condamner un innocent.' },
+  MAYOR:        { accent: '#a56bd2', icon: '🏛️', set: 'podium', title: 'LE POIDS DU POUVOIR', action: 'PRÉPARER LE JOUR', copy: 'Ton pouvoir s’exerce au grand jour. Décide quand révéler ton autorité.' },
+  SPY:          { accent: '#4aaab6', icon: '📡', set: 'radio', title: 'ÉCOUTE CLANDESTINE', action: 'INTERCEPTER', copy: 'Reste à l’écoute des mouvements de la Mafia.' },
+  VETERAN:      { accent: '#b68745', icon: '🎖️', set: 'armory', title: 'DERNIÈRE GARDE', action: 'RESTER SUR SES GARDES', copy: 'La moindre visite peut devenir une menace.' },
+  GODFATHER:    { accent: '#a866d5', icon: '🎩', set: 'office', title: 'L’ORDRE DU PARRAIN', action: 'ORDONNER L’ASSASSINAT', copy: 'Choisis la victime de la famille. Ta décision fait autorité.' },
+  MAFIOSO:      { accent: '#d54e43', icon: '🔪', set: 'alley', title: 'LE CONTRAT', action: 'CHOISIR LA CIBLE', copy: 'Exécute le meurtre décidé avec ta famille.' },
+  CONSIGLIERE:  { accent: '#bd665d', icon: '🕵️', set: 'office', title: 'DOSSIERS DE LA FAMILLE', action: 'DÉCOUVRIR LE RÔLE', copy: 'Identifie le rôle exact d’une cible pour conseiller la Mafia.' },
+  CONSORT:      { accent: '#bd4e78', icon: '🥀', set: 'club', title: 'RENDEZ-VOUS SECRET', action: 'BLOQUER CETTE CIBLE', copy: 'Neutralise l’action nocturne d’un adversaire.' },
+  BLACKMAILER:  { accent: '#c54b43', icon: '🤐', set: 'office', title: 'LE DOSSIER COMPROMETTANT', action: 'FAIRE CHANTER', copy: 'Choisis qui sera privé de parole au lever du jour.' },
+  JANITOR:      { accent: '#9f554d', icon: '🧹', set: 'morgue', title: 'EFFACER LES TRACES', action: 'PRÉPARER LE NETTOYAGE', copy: 'Cache le rôle et le testament de la prochaine victime.' },
+  FRAMER:       { accent: '#c87542', icon: '🖋️', set: 'evidence', title: 'FABRIQUER LES PREUVES', action: 'PIÉGER CETTE CIBLE', copy: 'Fais paraître un innocent suspect aux yeux des enquêteurs.' },
+};
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -84,12 +120,15 @@ export default function GamePage() {
   const [chatMessages, setChatMessages] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
   const [notes, setNotes]         = useState({});     // userId → { text, suspicion }
+  const [evidence, setEvidence]   = useState([]);
+  const [blackmailedRound, setBlackmailedRound] = useState(null);
   const [gameLog, setGameLog]     = useState([]);     // { icon, text, round }
   const [muted, setMuted]         = useState(true);
   const [roleHidden, setRoleHidden] = useState(true);
   useEffect(() => { setMuted(isMuted()); }, []);
 
   const socketRef = useRef(null);
+  const noteTimers = useRef({});
   const toastId   = useRef(0);
   const roundRef  = useRef(1);
   useEffect(() => { roundRef.current = round; }, [round]);
@@ -121,6 +160,7 @@ export default function GamePage() {
       if (d.startAt) setStartAt(d.startAt);
       if (d.players) setPlayers(d.players);
       if (d.votes)   setVotes(d.votes);
+      if (d.evidenceBoard) setEvidence(d.evidenceBoard);
     };
     const onPhase = (d) => {
       setPhase(d.phase);
@@ -143,7 +183,11 @@ export default function GamePage() {
         setTrial(null); setSentence(null);
       }
     };
-    const onPublic   = (d) => { if (d?.players) setPlayers(d.players); if (d?.votes) setVotes(d.votes); };
+    const onPublic   = (d) => {
+      if (d?.players) setPlayers(d.players);
+      if (d?.votes) setVotes(d.votes);
+      if (d?.evidenceBoard) setEvidence(d.evidenceBoard);
+    };
     const onRole     = (d) => setRole(d);
     const onVotes    = (d) => setVotes(d.tally ?? {});
     const onGazette  = (d) => {
@@ -173,7 +217,10 @@ export default function GamePage() {
     const onRewards  = (d) => setRewards(d);
     const onDet      = (d) => setDetective({ ...d, kind: 'team' });
     const onCons     = (d) => setDetective({ ...d, kind: 'role' });
-    const onActionOk = ()  => setActionConfirmed(true);
+    const onTracker  = (d) => setDetective({ ...d, kind: 'visit' });
+    const onLookout  = (d) => setDetective({ ...d, kind: 'watch' });
+    const onInvestigator = (d) => setDetective({ ...d, kind: 'crimes' });
+    const onActionOk = (d) => setActionConfirmed(Boolean(d?.ok));
     const onSkip     = (d) => setSkipInfo(d);
     const onChat     = (m) => {
       setChatMessages((prev) => [...prev.slice(-199), m]);
@@ -181,6 +228,17 @@ export default function GamePage() {
     };
     const onSaved    = ()  => toast('⚕️ Vous avez été attaqué cette nuit… mais quelqu\'un vous a sauvé.');
     const onDocSaved = (d) => toast(`⚕️ Votre protection a sauvé ${d.savedUsername} cette nuit !`);
+    const onBodyguardSaved = (d) => toast(`🛡️ ${d.guardUsername} s’est sacrifié pour vous sauver.`);
+    const onBodyguardSacrifice = (d) => toast(`🛡️ Vous vous êtes sacrifié pour sauver ${d.protectedUsername}.`);
+    const onBlackmailed = (d) => {
+      setBlackmailedRound(d.round);
+      toast('🤐 La Mafia vous a réduit au silence pour la journée.');
+    };
+    const onChatBlocked = (d) => {
+      if (d?.reason === 'BLACKMAILED') toast('🤐 Vous êtes réduit au silence aujourd’hui.');
+    };
+    const onNotebook = (d) => setNotes(d.entries ?? {});
+    const onEvidence = (d) => setEvidence(d.items ?? []);
     const onDisc     = (d) => setOffline((o) => [...new Set([...o, d.userId])]);
     const onReco     = (d) => setOffline((o) => o.filter((u) => u !== d.userId));
     const onNightRes = (d) => {
@@ -206,10 +264,19 @@ export default function GamePage() {
     socket.on('game:rewards',             onRewards);
     socket.on('night:detective_result',   onDet);
     socket.on('night:consigliere_result', onCons);
+    socket.on('night:tracker_result',      onTracker);
+    socket.on('night:lookout_result',      onLookout);
+    socket.on('night:investigator_result', onInvestigator);
     socket.on('night:action_received',    onActionOk);
     socket.on('night:result',             onNightRes);
     socket.on('night:you_were_saved',     onSaved);
     socket.on('night:doctor_saved',       onDocSaved);
+    socket.on('night:bodyguard_saved',    onBodyguardSaved);
+    socket.on('night:bodyguard_sacrifice', onBodyguardSacrifice);
+    socket.on('night:blackmailed',        onBlackmailed);
+    socket.on('chat:blocked',             onChatBlocked);
+    socket.on('notebook:sync',            onNotebook);
+    socket.on('evidence:updated',          onEvidence);
     socket.on('phase:skip_votes_updated', onSkip);
     socket.on('game:player_disconnected', onDisc);
     socket.on('game:player_reconnected',  onReco);
@@ -225,11 +292,13 @@ export default function GamePage() {
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(tick);
+      Object.values(noteTimers.current).forEach(clearTimeout);
       ['game:sync', 'phase:start', 'game:public_state', 'game:role_assigned',
        'vote:update', 'gazette:published', 'trial:started', 'judgment:voted',
        'sentence:executed', 'sentence:acquitted', 'game:over', 'game:rewards',
-       'night:detective_result', 'night:consigliere_result', 'night:action_received', 'night:result',
+       'night:detective_result', 'night:consigliere_result', 'night:tracker_result', 'night:lookout_result', 'night:investigator_result', 'night:action_received', 'night:result',
        'night:you_were_saved', 'night:doctor_saved', 'phase:skip_votes_updated',
+       'night:blackmailed', 'night:bodyguard_saved', 'night:bodyguard_sacrifice', 'chat:blocked', 'notebook:sync', 'evidence:updated',
        'game:player_disconnected', 'game:player_reconnected', 'chat:message',
       ].forEach((e) => socket.off(e));
       socket.off('connect', onReconnect);
@@ -239,24 +308,26 @@ export default function GamePage() {
   // ── Derived state ───────────────────────────────────────────────────────────
   const me      = players.find((p) => p.userId === session?.userId);
   const isAlive = me?.isAlive ?? true;
+  const mafiaTeammates = role?.team === 'MAFIA' ? (role.teammates ?? []) : [];
+  const mafiaTeammateIds = new Set(mafiaTeammates.map((p) => p.userId));
 
   const canActAtNight =
     phase === 'NIGHT' && isAlive && role && NIGHT_ACTION_ROLES.includes(role.role);
 
   const isNightPhase = phase === 'NIGHT' || phase === 'NIGHT_RESOLVE';
-  const isMediumSeance = isAlive && role?.role === 'MEDIUM' && isNightPhase;
+  const isSilenced = isAlive && (
+    Boolean(me?.silenced) || (blackmailedRound === round && DAY_PHASES.includes(phase))
+  );
 
   const chatChannels = [];
   if (!isAlive) chatChannels.push('dead');
-  if (isMediumSeance) chatChannels.push('dead'); // séance spirite du Médium
   chatChannels.push('day');
   if (isAlive && role?.team === 'MAFIA' && isNightPhase) {
     chatChannels.unshift('mafia');
   }
   const canWrite =
     (!isAlive) ||
-    isMediumSeance ||
-    (isAlive && DAY_PHASES.includes(phase)) ||
+    (isAlive && !isSilenced && DAY_PHASES.includes(phase)) ||
     (isAlive && role?.team === 'MAFIA' && isNightPhase);
 
   const remaining = endAt > now ? Math.round((endAt - now) / 1000) : 0;
@@ -276,8 +347,18 @@ export default function GamePage() {
   const send = useCallback((event, payload) =>
     socketRef.current?.emit(event, { gameId, ...payload }), [gameId]);
 
+  function canTargetPlayer(p) {
+    if (!p.isAlive) return false;
+    if (phase === 'DAY_VOTE') return isAlive && p.userId !== session?.userId;
+    if (!canActAtNight) return false;
+    if (role?.role === 'DOCTOR') return true;
+    if (p.userId === session?.userId) return false;
+    if (role?.team === 'MAFIA' && mafiaTeammateIds.has(p.userId)) return false;
+    return true;
+  }
+
   function clickPlayer(p) {
-    if (!p.isAlive || p.userId === session?.userId) return;
+    if (!canTargetPlayer(p)) return;
     if (canActAtNight) {
       setNightTarget(p.userId);
       setActionConfirmed(false);
@@ -303,90 +384,166 @@ export default function GamePage() {
 
   // ═══ Game over ═══
   if (winner) {
+    const mafiaWon = winner.winner === 'MAFIA';
     return (
-      <div className="page" style={{ maxWidth: 560, textAlign: 'center', paddingTop: 50 }}>
-        <div className={`ambiance on ${winner.winner === 'MAFIA' ? 'ambiance-danger' : 'ambiance-day'}`} />
-        <h1 className="title-gold" style={{ fontSize: 30, marginBottom: 6 }}>
-          {winner.winner === 'MAFIA' ? '🔪 LA MAFIA TRIOMPHE' : '🏘️ LE VILLAGE TRIOMPHE'}
-        </h1>
-        <p className="dim" style={{ fontStyle: 'italic', marginBottom: 24 }}>La partie est terminée.</p>
+      <main className={`game-over-screen ${mafiaWon ? 'mafia-victory' : 'village-victory'}`}>
+        <div className={`ambiance on ${mafiaWon ? 'ambiance-danger' : 'ambiance-day'}`} />
+        <div className="end-vignette" aria-hidden="true" />
+        <section className="game-over-content">
+          <div className="page-eyebrow">DOSSIER DE PARTIE CLOS</div>
+          <div className="victory-emblem">{mafiaWon ? '◆' : '✦'}</div>
+          <h1>{mafiaWon ? 'LA MAFIA TRIOMPHE' : 'LA TOWN TRIOMPHE'}</h1>
+          <p>La ville connaît enfin la vérité. Tous les rôles sont révélés.</p>
 
-        {rewards && (
-          <div className="gazette-entry gold" style={{ marginBottom: 20, textAlign: 'left' }}>
-            💎 <b>+{rewards.diamondsEarned} diamants gagnés</b>
-            {(rewards.newAchievements ?? []).map((a) => (
-              <div key={a.id} style={{ marginTop: 6, fontSize: 13 }}>
-                {a.icon} <b>{a.name}</b> — {a.description}
-                <span className="dim"> (+{a.diamondReward} 💎)</span>
+          {rewards && (
+            <div className="reward-summary">
+              <div><span>RÉCOMPENSE</span><strong>+{rewards.diamondsEarned} 💎</strong></div>
+              {(rewards.newAchievements ?? []).map((a) => (
+                <div key={a.id} className="reward-achievement">
+                  <span>{a.icon}</span>
+                  <p><strong>{a.name}</strong><small>{a.description} · +{a.diamondReward} 💎</small></p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="final-roster">
+            {(winner.players ?? []).map((p) => (
+              <div key={p.userId} className={`final-player ${p.team === 'MAFIA' ? 'mafia' : 'village'} ${p.isAlive ? '' : 'eliminated'}`}>
+                <span className="final-role-icon">{ROLE_EMOJI[p.role] ?? '❓'}</span>
+                <div><strong>{p.username}</strong><small>{ROLE_LABELS[p.role] ?? p.role}</small></div>
+                <span className="final-status">{p.isAlive ? 'SURVIVANT' : 'ÉLIMINÉ'}</span>
               </div>
             ))}
           </div>
-        )}
 
-        <div className="card" style={{ textAlign: 'left' }}>
-          {(winner.players ?? []).map((p) => (
-            <div key={p.userId}
-                 style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px',
-                          opacity: p.isAlive ? 1 : 0.5 }}>
-              <span>{ROLE_EMOJI[p.role] ?? ''} {p.username}{!p.isAlive ? ' 💀' : ''}</span>
-              <span style={{ color: p.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
-                {ROLE_LABELS[p.role] ?? p.role}
-              </span>
-            </div>
-          ))}
-        </div>
-        <button className="primary" style={{ marginTop: 24 }} onClick={() => router.push('/lobby')}>
-          RETOUR À L&apos;ACCUEIL
-        </button>
-      </div>
+          <ReplayTimeline events={winner.replay ?? []} players={winner.players ?? []} />
+
+          <button className="btn-gold end-return" onClick={() => router.push('/lobby')}>
+            RETOURNER AU LOBBY <span>→</span>
+          </button>
+        </section>
+      </main>
     );
   }
 
   // ═══ Role reveal ═══
   if (phase === 'ROLE_REVEAL') {
     return (
-      <div className="page">
+      <main className="role-reveal-screen">
         <div className="ambiance ambiance-night on" />
+        <div className="reveal-vignette" aria-hidden="true" />
+        <div className="reveal-particles" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
+        </div>
         {role ? (
-          <div className={`role-reveal ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}>
-            <div className="dim" style={{ fontSize: 11, letterSpacing: 4 }}>VOTRE RÔLE</div>
-            <div className="role-icon">{ROLE_EMOJI[role.role] ?? '❓'}</div>
-            <div className="role-name cinzel"
-                 style={{ color: role.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--gold-hi)' }}>
-              {(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}
+          <section className={`role-reveal-stage ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}>
+            <div className="reveal-kicker"><span /> VOTRE IDENTITÉ POUR CETTE NUIT <span /></div>
+
+            <div className="role-card-wrap">
+              <div className="role-card-aura" aria-hidden="true" />
+              <div className="role-reveal-card">
+                <i className="card-corner corner-tl" /><i className="card-corner corner-tr" />
+                <i className="card-corner corner-bl" /><i className="card-corner corner-br" />
+                <div className="role-card-classified">DOSSIER CONFIDENTIEL · TOUR {round}</div>
+                <div className="role-sigil">
+                  <span className="sigil-ring" aria-hidden="true" />
+                  <div className="role-icon">{ROLE_EMOJI[role.role] ?? '❓'}</div>
+                </div>
+                <div className="role-reveal-copy">
+                  <div className="role-overline">VOUS ÊTES</div>
+                  <h1 className="role-name">{(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>
+                  <div className="role-team-name">
+                    {role.team === 'MAFIA' ? 'FAMILLE MAFIA' : 'ALLIANCE TOWN'}
+                  </div>
+                  <div className="role-divider"><span>◆</span></div>
+                  <p>{role.description}</p>
+                  {role.team === 'MAFIA' && (
+                    <div className="mafia-accomplices">
+                      <div className="accomplices-title">
+                        <span>VOS COMPLICES</span>
+                        <small>{mafiaTeammates.length + 1} MEMBRES</small>
+                      </div>
+                      {mafiaTeammates.length > 0 ? (
+                        <div className="accomplices-list">
+                          {mafiaTeammates.map((mate) => (
+                            <div key={mate.userId} className="accomplice">
+                              <span className="accomplice-mark">◆</span>
+                              <div>
+                                <strong>{mate.username}</strong>
+                                <small>{ROLE_LABELS[mate.role] ?? mate.role}{mate.isBot ? ' · BOT' : ''}</small>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="accomplices-empty">Vous êtes le seul membre de la Mafia.</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="role-secret">NE RÉVÉLEZ VOTRE IDENTITÉ À PERSONNE</div>
+                </div>
+              </div>
             </div>
-            <div className="dim" style={{ fontSize: 12, letterSpacing: 2, marginBottom: 14 }}>
-              CAMP {role.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
+
+            <div className="role-reveal-countdown">
+              <div>
+                <span>LA PARTIE COMMENCE</span>
+                <strong>{remaining > 0 ? `${remaining}s` : 'BIENTÔT'}</strong>
+              </div>
+              <div className="reveal-progress">
+                <span style={{ width: `${progress}%` }} />
+              </div>
             </div>
-            <p style={{ fontStyle: 'italic', color: 'var(--text-dim)', lineHeight: 1.5 }}>
-              {role.description}
-            </p>
-            <p className="dim" style={{ marginTop: 18, fontSize: 13 }}>
-              La nuit tombe dans {remaining > 0 ? `${remaining}s` : 'quelques instants'}…
-            </p>
-          </div>
+          </section>
         ) : (
-          <div className="suspense">Distribution des rôles…</div>
+          <div className="role-dealing">
+            <div className="dealing-card"><span>LG</span></div>
+            <div className="page-eyebrow">DISTRIBUTION DES RÔLES</div>
+            <p>La ville choisit votre destin…</p>
+          </div>
         )}
-      </div>
+      </main>
     );
+  }
+
+  function updateNote(subjectId, entry) {
+    const normalized = { text: entry.text ?? '', suspicion: entry.suspicion ?? '?' };
+    setNotes((current) => ({ ...current, [subjectId]: normalized }));
+    clearTimeout(noteTimers.current[subjectId]);
+    noteTimers.current[subjectId] = setTimeout(() => {
+      send('notebook:update', { subjectId, ...normalized });
+    }, 350);
+  }
+
+  function addEvidence(item) {
+    send('evidence:add', item);
+  }
+
+  function removeEvidence(evidenceId) {
+    send('evidence:remove', { evidenceId });
   }
 
   // ═══ Night resolve — suspense ═══
   if (phase === 'NIGHT_RESOLVE' && !(role?.team === 'MAFIA' && isAlive)) {
     return (
-      <div className="page">
+      <main className="night-resolve-screen">
         <div className="ambiance ambiance-night on" />
-        <div className="phase-banner">
-          <div className="dim" style={{ fontSize: 11, letterSpacing: 3 }}>TOUR {round}</div>
-          <div className="phase-name">🌘 {PHASE_LABELS[phase]}</div>
-        </div>
-        <div className="suspense">
-          <span className="moon">🌘</span>
-          {nightMsg || 'Les événements de la nuit se déroulent…'}
+        <div className="night-resolve-vignette" aria-hidden="true" />
+        <div className="night-moon" aria-hidden="true"><span>☾</span></div>
+        <section className="night-resolve-content">
+          <div className="page-eyebrow">NUIT {round} · LA VILLE RETIENT SON SOUFFLE</div>
+          <h1>LA NUIT S&apos;ACHÈVE…</h1>
+          <div className="night-ornament"><span>◆</span></div>
+          <p>{nightMsg || 'Dans l’ombre, chaque décision produit ses conséquences.'}</p>
+          <div className="night-resolve-progress"><span /></div>
+          <small>RÉSOLUTION DES ACTIONS EN COURS</small>
+        </section>
+        <div className="night-silhouettes" aria-hidden="true">
+          <i /><i /><i /><i /><i />
         </div>
         <ToastZone toasts={toasts} />
-      </div>
+      </main>
     );
   }
 
@@ -492,6 +649,7 @@ export default function GamePage() {
       <div className="game-main">
         {/* Left: chat */}
         <div className="side-panel">
+          {isSilenced && <div className="silenced-banner">🤐 RÉDUIT AU SILENCE</div>}
           <Chat
             messages={chatMessages}
             available={chatChannels}
@@ -502,7 +660,35 @@ export default function GamePage() {
         </div>
 
         {/* Center: table scene */}
-        <div className={`table-scene scene-${ambiance || 'night'}`} style={{ backgroundImage: `url('${sceneBg}')` }}>
+        <div className={`table-scene scene-${ambiance || 'night'} phase-${phase.toLowerCase().replaceAll('_', '-')}`} style={{ backgroundImage: `url('${sceneBg}')` }}>
+          <PhaseCenterStage
+            phase={phase}
+            round={round}
+            remaining={remaining}
+            role={role}
+            players={players}
+            avatarMap={avatarMap}
+            sessionId={session.userId}
+            isAlive={isAlive}
+            nightTarget={nightTarget}
+            actionConfirmed={actionConfirmed}
+            canTargetPlayer={canTargetPlayer}
+            clickPlayer={clickPlayer}
+            mafiaTeammateIds={mafiaTeammateIds}
+            gazetteNow={gazetteNow}
+            nightMsg={nightMsg}
+            detective={detective}
+            trial={trial}
+            sentence={sentence}
+            votes={votes}
+            myVote={myVote}
+            myVerdict={myVerdict}
+            judgment={judgment}
+            castVerdict={castVerdict}
+            onOpenNotebook={() => setPanelOpen(true)}
+            onSkip={() => send('phase:skip_vote', {})}
+            skipInfo={skipInfo}
+          />
           <div className="table-oval" />
 
           {/* Contextual banners */}
@@ -513,7 +699,8 @@ export default function GamePage() {
               </div>
             ) : (
               <div key={i} className="scene-banner danger" style={{ top: 12 + i * 54 }}>
-                ☠️ <b>{e.eliminatedUsername}</b> a été éliminé — {ROLE_LABELS[e.eliminatedRole] ?? e.eliminatedRole}
+                ☠️ <b>{e.eliminatedUsername}</b> a été éliminé — {e.eliminatedRole ? (ROLE_LABELS[e.eliminatedRole] ?? e.eliminatedRole) : 'RÔLE INCONNU'}
+                {e.message ? <div className="dim" style={{ fontSize: 12 }}>{e.message}</div> : null}
                 {e.will ? <div className="dim" style={{ fontSize: 12, fontStyle: 'italic' }}>📜 « {e.will} »</div> : null}
               </div>
             ),
@@ -522,9 +709,15 @@ export default function GamePage() {
             <div className="scene-banner info">
               {detective.kind === 'role'
                 ? <>🕵️ <b>{detective.targetUsername}</b> est <b style={{ color: 'var(--gold-hi)' }}>{ROLE_LABELS[detective.role] ?? detective.role}</b></>
-                : <>🔍 <b>{detective.targetUsername}</b> est du camp{' '}
+                : detective.kind === 'crimes'
+                  ? <>🔎 Crimes de <b>{detective.targetUsername}</b> : <b>{(detective.crimes ?? []).join(', ') || 'aucun crime connu'}</b>.</>
+                : detective.kind === 'visit'
+                  ? <>👣 <b>{detective.targetUsername}</b> a visité <b>{detective.visitedUsername ?? 'personne'}</b>.</>
+                  : detective.kind === 'watch'
+                    ? <>👁️ Visiteurs de <b>{detective.targetUsername}</b> : <b>{(detective.visitorUsernames ?? []).join(', ') || 'aucun'}</b>.</>
+                    : <>🔍 <b>{detective.targetUsername}</b> est du camp{' '}
                     <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
-                      {detective.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
+                      {detective.team === 'MAFIA' ? 'MAFIA' : 'TOWN'}
                     </b></>}
             </div>
           )}
@@ -552,8 +745,7 @@ export default function GamePage() {
           {/* Seats */}
           {players.map((p, i) => {
             const voteCount  = (votes[p.userId] ?? []).length;
-            const selectable = p.isAlive && p.userId !== session.userId &&
-              (canActAtNight || (phase === 'DAY_VOTE' && isAlive));
+            const selectable = canTargetPlayer(p);
             const selected = (phase === 'NIGHT' && nightTarget === p.userId) ||
                              (phase === 'DAY_VOTE' && myVote === p.userId);
             const avatarUrl = p.avatarId ? avatarMap[p.avatarId] : null;
@@ -565,6 +757,7 @@ export default function GamePage() {
                      p.isAlive ? '' : 'dead',
                      selectable ? 'selectable' : '',
                      selected ? 'selected' : '',
+                     mafiaTeammateIds.has(p.userId) ? 'teammate' : '',
                      p.userId === session.userId ? 'me' : '',
                    ].join(' ')}
                    style={seatStyle(i)}
@@ -586,6 +779,9 @@ export default function GamePage() {
                   <div className="seat-name" style={{ fontSize: 9, color: 'var(--text-dim)' }}>
                     {ROLE_LABELS[p.role] ?? p.role}
                   </div>
+                )}
+                {!p.isAlive && p.roleHidden && (
+                  <div className="seat-name cleaned-role">PREUVES NETTOYÉES</div>
                 )}
               </div>
             );
@@ -631,13 +827,16 @@ export default function GamePage() {
           <div className="panel-card roster-panel">
             <div className="panel-title">JOUEURS <span className="dim">{aliveCount}/{players.length}</span></div>
             {players.map((p) => (
-              <div key={p.userId} className={`roster-row ${p.isAlive ? '' : 'dead-row'}`}>
+              <div key={p.userId}
+                   className={`roster-row ${p.isAlive ? '' : 'dead-row'} ${mafiaTeammateIds.has(p.userId) ? 'mafia-mate-row' : ''}`}>
                 <span className="dot" />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.username}
                   {p.userId === session.userId ? ' (vous)' : ''}
                   {p.isBot && <span className="bot-chip">BOT</span>}
                 </span>
+                {mafiaTeammateIds.has(p.userId) && <span className="mafia-mate-badge">MAFIA</span>}
+                {p.roleHidden && <span className="cleaned-badge">NETTOYÉ</span>}
                 {!p.isAlive && <span style={{ fontSize: 11 }}>💀</span>}
               </div>
             ))}
@@ -736,7 +935,11 @@ export default function GamePage() {
         myRole={role?.role}
         round={round}
         notes={notes}
-        setNotes={setNotes}
+        onUpdateNote={updateNote}
+        evidence={evidence}
+        onAddEvidence={addEvidence}
+        onRemoveEvidence={removeEvidence}
+        canPublishEvidence={isAlive && ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL'].includes(phase)}
         will={will}
         setWill={setWill}
         onSaveWill={saveWill}
@@ -745,6 +948,243 @@ export default function GamePage() {
 
       <ToastZone toasts={toasts} />
     </div>
+  );
+}
+
+function PhaseCenterStage({
+  phase, round, remaining, role, players, avatarMap, sessionId, isAlive,
+  nightTarget, actionConfirmed, canTargetPlayer, clickPlayer, mafiaTeammateIds,
+  gazetteNow, nightMsg, detective, trial, sentence, votes, myVote, myVerdict,
+  judgment, castVerdict, onOpenNotebook, onSkip, skipInfo,
+}) {
+  const timer = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
+  const living = players.filter((player) => player.isAlive);
+
+  const playerOption = (player, mode = 'night') => {
+    const selected = mode === 'night' ? nightTarget === player.userId : myVote === player.userId;
+    const enabled = mode === 'night'
+      ? canTargetPlayer(player)
+      : isAlive && player.userId !== sessionId;
+    const avatarUrl = player.avatarId ? avatarMap[player.avatarId] : null;
+    const teammate = mafiaTeammateIds.has(player.userId);
+    return (
+      <button
+        key={player.userId}
+        className={`phase-player-option ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''}`}
+        disabled={!enabled}
+        onClick={() => enabled && clickPlayer(player)}
+      >
+        <span className="phase-player-avatar">
+          {avatarUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={avatarUrl} alt="" />
+            : (player.isBot ? '🤖' : player.username?.[0]?.toUpperCase())}
+        </span>
+        <span><b>{player.username}</b><small>{player.userId === sessionId ? 'VOUS' : teammate ? 'ALLIÉ MAFIA' : 'VIVANT'}</small></span>
+        <i>{selected ? '✓' : '›'}</i>
+      </button>
+    );
+  };
+
+  const footer = (allowSkip = false) => (
+    <div className="phase-stage-footer">
+      <button onClick={onOpenNotebook}>📖 <span>CARNET D’ENQUÊTE</span></button>
+      {allowSkip && <button onClick={onSkip}>⏭ <span>{skipInfo ? `PASSER · ${skipInfo.count}/${skipInfo.total}` : 'PASSER LA PHASE'}</span></button>}
+    </div>
+  );
+
+  if (phase === 'NIGHT' || phase === 'NIGHT_RESOLVE') {
+    const theme = ROLE_NIGHT_SCENES[role?.role] ?? ROLE_NIGHT_SCENES.CITIZEN;
+    const canAct = phase === 'NIGHT' && NIGHT_ACTION_ROLES.includes(role?.role) && isAlive;
+    const isResolving = phase === 'NIGHT_RESOLVE';
+    return (
+      <section
+        className={`phase-stage night-role-stage night-set-${theme.set}`}
+        style={{ '--role-accent': theme.accent }}
+      >
+        <div className="night-role-atmosphere" aria-hidden="true"><span>{theme.icon}</span></div>
+        <header className="phase-stage-heading">
+          <div><small>NUIT {round} · TON RÔLE</small><h2>{ROLE_LABELS[role?.role] ?? role?.role ?? 'INCONNU'}</h2></div>
+          <time><small>FIN DE NUIT</small>{timer}</time>
+        </header>
+        <div className="night-role-layout">
+          <article className="night-role-brief">
+            <span className="night-role-icon">{theme.icon}</span>
+            <small>MISSION NOCTURNE</small>
+            <h1>{theme.title}</h1>
+            <p>{theme.copy}</p>
+            {role?.team === 'MAFIA' && (
+              <div className="known-team-strip">
+                <small>TA FAMILLE</small>
+                <div>{players.filter((player) => player.userId === sessionId || mafiaTeammateIds.has(player.userId)).map((player) => <span key={player.userId}>◆ {player.username}</span>)}</div>
+              </div>
+            )}
+          </article>
+          <article className="night-action-card">
+            {isResolving ? (
+              <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>ACTION EN COURS</small><h3>LA NUIT S’ACHÈVE</h3><p>Les actions sont en train d’être résolues.</p></div>
+            ) : canAct ? (
+              <>
+                <div className="night-action-title"><span>SÉLECTIONNE UNE CIBLE</span><b>{living.filter(canTargetPlayer).length} choix</b></div>
+                <div className="phase-player-grid">{living.map((player) => playerOption(player))}</div>
+                <div className={`night-confirm-state ${actionConfirmed ? 'confirmed' : ''}`}>
+                  <span>{actionConfirmed ? '✓ ACTION ENREGISTRÉE' : theme.action}</span>
+                  <small>{nightTarget ? 'Tu peux encore modifier ta cible.' : 'Choisis un joueur pour agir.'}</small>
+                </div>
+              </>
+            ) : (
+              <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>AUCUNE ACTION ACTIVE</small><h3>OBSERVE ET PRÉPARE-TOI</h3><p>Ton rôle agira pendant une autre phase ou dispose d’un pouvoir passif.</p></div>
+            )}
+          </article>
+        </div>
+        {footer(false)}
+      </section>
+    );
+  }
+
+  if (phase === 'MORNING_GAZETTE') {
+    return (
+      <section className="phase-stage gazette-stage">
+        <header className="gazette-masthead"><span>ÉDITION Nº {round}</span><h1>LA GAZETTE DE LA NUIT</h1><time>{timer}</time></header>
+        <div className="gazette-paper">
+          <div className="gazette-date">LOUP GAROU MAFIA · JOUR {round} · ÉDITION SPÉCIALE</div>
+          {(gazetteNow.length ? gazetteNow : [{ noElimination: true }]).map((entry, index) => (
+            <article key={index} className={entry.noElimination ? 'peaceful' : 'fatal'}>
+              <span className="gazette-mark">{entry.noElimination ? '☀' : '☠'}</span>
+              <div>
+                <small>{entry.noElimination ? 'UNE NUIT ÉTONNAMMENT CALME' : 'DERNIÈRE HEURE'}</small>
+                <h2>{entry.noElimination ? 'AUCUNE VICTIME À DÉPLORER' : `${entry.eliminatedUsername} RETROUVÉ SANS VIE`}</h2>
+                <p>{entry.noElimination ? (nightMsg || 'La ville se réveille intacte, mais la menace demeure.') : entry.message || `La victime était ${entry.eliminatedRole ? ROLE_LABELS[entry.eliminatedRole] ?? entry.eliminatedRole : 'de rôle inconnu'}.`}</p>
+                {entry.will && <blockquote>« {entry.will} »</blockquote>}
+              </div>
+            </article>
+          ))}
+          <footer>VÉRIFIEZ LES FAITS · MÉFIEZ-VOUS DES RUMEURS · LA VILLE VOUS OBSERVE</footer>
+        </div>
+        {footer(true)}
+      </section>
+    );
+  }
+
+  if (phase === 'DAY_DISCUSSION') {
+    return (
+      <section className="phase-stage discussion-stage">
+        <header className="phase-stage-heading"><div><small>JOUR {round}</small><h2>LA PAROLE EST À LA VILLE</h2></div><time><small>DISCUSSION</small>{timer}</time></header>
+        <div className="discussion-emblem"><span>💬</span><h1>QUI MENT ?</h1><p>Compare les témoignages, les visites et les votes. Le chat est ouvert.</p></div>
+        <div className="discussion-cast">{living.map((player) => <span key={player.userId} className={player.userId === sessionId ? 'me' : ''}>{player.username}</span>)}</div>
+        {detective && <InvestigationResult result={detective} />}
+        {footer(true)}
+      </section>
+    );
+  }
+
+  if (phase === 'DAY_VOTE') {
+    return (
+      <section className="phase-stage vote-stage">
+        <header className="phase-stage-heading"><div><small>JOUR {round} · ACCUSATION</small><h2>DÉSIGNE UN SUSPECT</h2></div><time><small>FIN DU VOTE</small>{timer}</time></header>
+        <div className="vote-stage-layout">
+          <div className="vote-candidates">{living.map((player) => playerOption(player, 'vote'))}</div>
+          <aside><span className="vote-box-icon">🗳️</span><h3>{myVote ? 'VOTE ENREGISTRÉ' : 'À TON TOUR DE VOTER'}</h3><p>{myVote ? 'Tu peux modifier ton choix jusqu’à la clôture.' : 'Le suspect le plus désigné sera envoyé au procès.'}</p>{Object.entries(votes).map(([id, voterIds]) => voterIds.length ? <div className="live-vote-row" key={id}><span>{players.find((p) => p.userId === id)?.username}</span><b>{voterIds.length}</b></div> : null)}</aside>
+        </div>
+        {footer(true)}
+      </section>
+    );
+  }
+
+  if (phase === 'TRIAL' || phase === 'JUDGMENT') {
+    const accused = players.find((player) => player.userId === trial?.accusedId);
+    const isAccused = trial?.accusedId === sessionId;
+    return (
+      <section className={`phase-stage court-stage ${phase === 'JUDGMENT' ? 'judging' : ''}`}>
+        <header className="phase-stage-heading"><div><small>TRIBUNAL DE LA VILLE</small><h2>{phase === 'TRIAL' ? 'LE PROCÈS' : 'LE VERDICT'}</h2></div><time><small>{phase === 'TRIAL' ? 'DÉFENSE' : 'DÉLIBÉRATION'}</small>{timer}</time></header>
+        <div className="courtroom">
+          <div className="court-seal">⚖️</div>
+          <div className="accused-stand"><small>L’ACCUSÉ</small><span>{accused?.username?.[0]?.toUpperCase() ?? '?'}</span><h1>{accused?.username ?? 'INCONNU'}</h1><p>{isAccused ? 'Défends-toi maintenant dans le chat.' : phase === 'TRIAL' ? 'Écoute sa défense avant de juger.' : 'Décide de son sort.'}</p></div>
+          {phase === 'JUDGMENT' && isAlive && !isAccused ? (
+            <div className="court-verdict-actions"><button className={myVerdict === 'GUILTY' ? 'active guilty' : 'guilty'} onClick={() => castVerdict('GUILTY')}>COUPABLE</button><button className={myVerdict === 'INNOCENT' ? 'active innocent' : 'innocent'} onClick={() => castVerdict('INNOCENT')}>INNOCENT</button><button className={myVerdict === 'ABSTAIN' ? 'active' : ''} onClick={() => castVerdict('ABSTAIN')}>ABSTENTION</button></div>
+          ) : <div className="court-instruction">{phase === 'TRIAL' ? 'LA DÉFENSE A LA PAROLE' : 'EN ATTENTE DU VERDICT'}</div>}
+          {judgment && phase === 'JUDGMENT' && <div className="court-tally"><span><b>{judgment.guilty}</b> COUPABLE</span><i>CONTRE</i><span><b>{judgment.innocent}</b> INNOCENT</span></div>}
+        </div>
+        {footer(false)}
+      </section>
+    );
+  }
+
+  if (phase === 'SENTENCE') {
+    const executed = sentence?.type === 'executed';
+    return (
+      <section className={`phase-stage sentence-stage ${executed ? 'executed' : 'acquitted'}`}>
+        <div className="sentence-light" />
+        <small>LE TRIBUNAL A TRANCHÉ</small>
+        <span className="sentence-symbol">{executed ? '⚒' : '🕊️'}</span>
+        <h1>{executed ? 'COUPABLE' : 'ACQUITTÉ'}</h1>
+        <h2>{sentence?.username ?? trial?.accusedUsername ?? 'L’ACCUSÉ'}</h2>
+        <p>{executed ? `Son rôle était ${ROLE_LABELS[sentence?.role] ?? sentence?.role ?? 'inconnu'}.` : 'Le doute a profité à l’accusé.'}</p>
+        {sentence?.will && <blockquote>DERNIER TESTAMENT · « {sentence.will} »</blockquote>}
+        {footer(false)}
+      </section>
+    );
+  }
+
+  return null;
+}
+
+function InvestigationResult({ result }) {
+  let text = `${result.targetUsername} paraît ${result.team === 'MAFIA' ? 'suspect' : 'non suspect'}.`;
+  if (result.kind === 'role') text = `${result.targetUsername} est ${ROLE_LABELS[result.role] ?? result.role}.`;
+  if (result.kind === 'crimes') text = `${result.targetUsername} : ${(result.crimes ?? []).join(', ') || 'aucun crime connu'}.`;
+  if (result.kind === 'visit') text = `${result.targetUsername} a visité ${result.visitedUsername ?? 'personne'}.`;
+  if (result.kind === 'watch') text = `Visiteurs de ${result.targetUsername} : ${(result.visitorUsernames ?? []).join(', ') || 'aucun'}.`;
+  return <div className="investigation-result"><small>RÉSULTAT DE LA NUIT</small><b>{text}</b></div>;
+}
+
+function ReplayTimeline({ events, players }) {
+  const [open, setOpen] = useState(false);
+  const names = Object.fromEntries(players.map((p) => [p.userId, p.username]));
+
+  function describe(event) {
+    const actor = names[event.actorId] ?? 'Le système';
+    const target = names[event.targetId] ?? '—';
+    switch (event.type) {
+      case 'ROLE_ASSIGNED': return `${actor} était ${ROLE_LABELS[event.data?.role] ?? event.data?.role}`;
+      case 'NIGHT_ACTION': return `${actor} (${ROLE_LABELS[event.data?.role] ?? event.data?.role}) a ciblé ${target}`;
+      case 'NIGHT_DEATH': return `${target} a été éliminé par ${actor}${event.data?.cleaned ? ' — preuves nettoyées' : ''}`;
+      case 'PLAYER_SAVED': return `${actor} a sauvé ${target}`;
+      case 'INVESTIGATION':
+        if (event.data?.kind === 'visit') return `${actor} a suivi ${target}`;
+        if (event.data?.kind === 'watch') return `${actor} a surveillé ${target}`;
+        return `${actor} a enquêté sur ${target}`;
+      case 'BODYGUARD_SACRIFICE': return `${actor} s’est sacrifié pour sauver ${target}`;
+      case 'BLACKMAILED': return `${target} a été réduit au silence`;
+      case 'DAY_VOTE': return `${actor} a voté contre ${target}`;
+      case 'JUDGMENT_VOTE': return `${actor} a voté ${event.data?.verdict ?? ''}`;
+      case 'JUDGMENT_RESULT': return `Verdict : ${event.data?.verdict ?? ''}${event.targetId ? ` pour ${target}` : ''}`;
+      case 'EVIDENCE_ADDED': return `${actor} a épinglé une preuve sur ${target}`;
+      case 'CHAT_MESSAGE': return `${actor} [${event.data?.channel}] : ${event.data?.message}`;
+      case 'PHASE_STARTED': return `${PHASE_LABELS[event.data?.phase] ?? event.data?.phase}`;
+      case 'GAME_OVER': return `Victoire : ${event.data?.winner === 'MAFIA' ? 'Mafia' : 'Village'}`;
+      default: return event.type;
+    }
+  }
+
+  return (
+    <section className={`replay-dossier ${open ? 'open' : ''}`}>
+      <button className="replay-toggle" onClick={() => setOpen((value) => !value)}>
+        <span><small>ARCHIVES DÉCLASSIFIÉES</small>REPLAY DE LA PARTIE</span>
+        <b>{events.length} ÉVÉNEMENTS {open ? '−' : '+'}</b>
+      </button>
+      {open && (
+        <div className="replay-timeline">
+          {events.map((event) => (
+            <div key={event.id} className={`replay-event event-${event.type.toLowerCase()}`}>
+              <span className="replay-round">T{event.round}</span>
+              <i />
+              <div><small>{PHASE_LABELS[event.phase] ?? event.phase}</small><p>{describe(event)}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

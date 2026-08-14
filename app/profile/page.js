@@ -7,12 +7,12 @@ import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
 
 const ROLE_LABELS = {
-  VILLAGER: 'Villageois', MAFIA: 'Mafioso', DETECTIVE: 'Détective',
-  DOCTOR: 'Médecin', MEDIUM: 'Médium', VIGILANTE: 'Vigilante',
+  CITIZEN: 'Citoyen', MAFIOSO: 'Mafioso', SHERIFF: 'Shérif', DETECTIVE: 'Détective',
+  INVESTIGATOR: 'Enquêteur', DOCTOR: 'Médecin', VIGILANTE: 'Vigilante',
 };
 const ROLE_EMOJI = {
-  VILLAGER: '🏘️', MAFIA: '🔪', DETECTIVE: '🔍',
-  DOCTOR: '⚕️', MEDIUM: '🔮', VIGILANTE: '⚖️',
+  CITIZEN: '🏘️', MAFIOSO: '🔪', SHERIFF: '⭐', DETECTIVE: '👣',
+  INVESTIGATOR: '🔎', DOCTOR: '⚕️', VIGILANTE: '🔫',
 };
 
 export default function ProfilePage() {
@@ -103,14 +103,14 @@ export default function ProfilePage() {
               <span style={{ color: 'var(--blue)', fontSize: 12 }}>+{a.diamondReward} 💎</span>
             </div>
           ))}
-          {achievements.length === 0 && <p className="dim">Chargement…</p>}
+          {achievements.length === 0 && <div className="meta-loading"><span /> Chargement des succès…</div>}
         </div>
       )}
 
       {/* ── History ── */}
       {tab === 2 && (
         <div>
-          {history.length === 0 && <p className="dim" style={{ textAlign: 'center' }}>Aucune partie jouée.</p>}
+          {history.length === 0 && <div className="meta-empty"><strong>AUCUNE PARTIE ARCHIVÉE</strong><p>Votre historique apparaîtra après votre première nuit.</p></div>}
           {history.map((h) => (
             <div key={h.id} className="achievement-row">
               <span className="emoji">{ROLE_EMOJI[h.role] ?? '❓'}</span>
