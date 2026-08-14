@@ -511,7 +511,7 @@ export default function GamePage() {
                 <>
                   {ROLE_EMOJI[role.role]} {NIGHT_PROMPTS[role.role]}
                   {actionConfirmed && (
-                    <div style={{ color: '#3edc84', fontSize: 13, marginTop: 4 }}>
+                    <div style={{ color: 'var(--green)', fontSize: 13, marginTop: 4 }}>
                       ✓ Action enregistrée — modifiable jusqu&apos;à la fin de la nuit.
                     </div>
                   )}
