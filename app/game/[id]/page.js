@@ -86,6 +86,7 @@ export default function GamePage() {
   const [notes, setNotes]         = useState({});     // userId → { text, suspicion }
   const [gameLog, setGameLog]     = useState([]);     // { icon, text, round }
   const [muted, setMuted]         = useState(true);
+  const [roleHidden, setRoleHidden] = useState(true);
   useEffect(() => { setMuted(isMuted()); }, []);
 
   const socketRef = useRef(null);
@@ -389,255 +390,343 @@ export default function GamePage() {
     );
   }
 
-  // ═══ Main board ═══
-  return (
-    <div className="page">
-      {/* Ambiance overlays (cross-fade between phases) */}
-      <div className={`ambiance ambiance-night ${ambiance === 'night' ? 'on' : ''}`} />
-      <div className={`ambiance ambiance-day ${ambiance === 'day' ? 'on' : ''}`} />
-      <div className={`ambiance ambiance-trial ${ambiance === 'trial' ? 'on' : ''}`} />
-      <div className={`ambiance ambiance-danger ${ambiance === 'danger' ? 'on' : ''}`} />
+  // ═══ Main board — table ronde (v2) ═══
 
-      {/* ── Phase banner ── */}
-      <div className={`phase-banner ${bannerTone}`}>
-        <div className="dim" style={{ fontSize: 11, letterSpacing: 3 }}>TOUR {round}</div>
-        <div className="phase-name" key={phase}>
-          {phase === 'NIGHT' ? '🌙 ' : ''}{PHASE_LABELS[phase] ?? phase ?? '…'}
+  const sceneBg = ({
+    night:  '/bg/nuit.webp',
+    day:    '/bg/jour.webp',
+    trial:  '/bg/proces.webp',
+    danger: '/bg/sentence.webp',
+  })[ambiance] ?? '/bg/nuit.webp';
+
+  const N = Math.max(players.length, 1);
+  const seatStyle = (i) => {
+    const a = (i / N) * 2 * Math.PI - Math.PI / 2;
+    return {
+      left: `${50 + 41 * Math.cos(a)}%`,
+      top:  `${52 + 37 * Math.sin(a)}%`,
+    };
+  };
+
+  const shortCode = gameId.slice(-4).toUpperCase();
+  const isDayTone = ambiance === 'day';
+  const aliveCount = players.filter((p) => p.isAlive).length;
+
+  // Main action pill content per phase
+  let mainAction = { label: PHASE_LABELS[phase] ?? '…', sub: '' };
+  if (phase === 'NIGHT') {
+    mainAction = canActAtNight
+      ? {
+          label: actionConfirmed ? '✓ ACTION ENREGISTRÉE' : 'CHOISIS TA CIBLE',
+          sub: actionConfirmed
+            ? 'Modifiable jusqu\'à la fin de la nuit'
+            : NIGHT_PROMPTS[role?.role] ?? '',
+        }
+      : { label: '🌙 LA VILLE DORT', sub: 'Vous n\'avez pas d\'action cette nuit' };
+  } else if (phase === 'MORNING_GAZETTE') {
+    mainAction = { label: '📰 LA GAZETTE', sub: nightMsg || 'Les nouvelles du matin' };
+  } else if (phase === 'DAY_DISCUSSION') {
+    mainAction = { label: '💬 DISCUSSION EN COURS', sub: 'Débattez dans le chat — trouvez la Mafia' };
+  } else if (phase === 'DAY_VOTE') {
+    mainAction = myVote
+      ? { label: '✓ VOTE ENREGISTRÉ', sub: 'Cliquez un autre joueur pour changer' }
+      : { label: '🗳️ VOTE EN COURS', sub: 'Cliquez sur un joueur autour de la table' };
+  } else if (phase === 'TRIAL') {
+    mainAction = { label: '⚖️ PROCÈS', sub: `${trial?.accusedUsername ?? '…'} présente sa défense` };
+  } else if (phase === 'JUDGMENT') {
+    mainAction = { label: '⚖️ JUGEMENT', sub: `Le sort de ${trial?.accusedUsername ?? '…'} est entre vos mains` };
+  } else if (phase === 'SENTENCE') {
+    mainAction = sentence?.type === 'executed'
+      ? { label: '🔨 SENTENCE', sub: `${sentence.username} a été exécuté` }
+      : { label: '🕊️ ACQUITTÉ', sub: 'Le doute a profité à l\'accusé' };
+  }
+
+  const gazetteNow = phase === 'MORNING_GAZETTE'
+    ? gazette.filter((e) => e.round === round)
+    : [];
+
+  return (
+    <div className="game-shell">
+      {/* ── Top bar ── */}
+      <div className="game-topbar">
+        <div className="left">
+          <span className="game-code">PARTIE #{shortCode}</span>
+          <span className="game-sub">{aliveCount} / {players.length} joueurs en vie</span>
         </div>
-        {role && (
-          <div style={{ fontSize: 13, marginTop: 4 }}>
-            <span className="dim">Votre rôle : </span>
-            <span style={{ color: role.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--gold-hi)' }}
-                  className="cinzel">
-              {ROLE_EMOJI[role.role]} {ROLE_LABELS[role.role] ?? role.role}
-            </span>
+
+        <div className="daynight">
+          <span style={{ fontSize: 16, opacity: isDayTone ? 1 : 0.3 }}>☀️</span>
+          <div className="track sun">
+            <div style={{ width: isDayTone ? `${progress}%` : '0%' }} />
           </div>
-        )}
-        {remaining > 0 && (
-          <>
-            <div className="timer-track">
-              <div className={`timer-fill ${remaining <= 10 ? 'urgent' : ''}`}
-                   style={{ width: `${progress}%` }} />
+          <div className="phase-pill">
+            <div className="big">
+              {ambiance === 'night' ? `NUIT ${round}` : `JOUR ${round}`}
             </div>
-            <div className="dim" style={{ fontSize: 12, marginTop: 5 }}>{remaining}s</div>
-          </>
-        )}
+            <div className="small">{PHASE_LABELS[phase] ?? '…'}</div>
+          </div>
+          <div className="track moon">
+            <div style={{ width: ambiance === 'night' ? `${progress}%` : '0%' }} />
+          </div>
+          <span style={{ fontSize: 16, opacity: ambiance === 'night' ? 1 : 0.3 }}>🌙</span>
+        </div>
+
+        <div className="right">
+          <div className={`timer-chip ${remaining <= 10 && remaining > 0 ? 'urgent' : ''}`}>
+            ⏱ {String(Math.floor(remaining / 60)).padStart(1, '0')}:{String(remaining % 60).padStart(2, '0')}
+            <span className="lbl">FIN DU TOUR</span>
+          </div>
+          <button style={{ fontSize: 14, padding: '8px 12px' }}
+                  title={muted ? 'Activer le son' : 'Couper le son'}
+                  onClick={() => setMuted(toggleMute())}>
+            {muted ? '🔇' : '🔊'}
+          </button>
+          <button className="danger" style={{ fontSize: 10, padding: '10px 14px' }}
+                  onClick={() => router.push('/lobby')}>
+            QUITTER
+          </button>
+        </div>
       </div>
 
-      <div className="game-layout">
-        {/* ── Left: board ── */}
-        <div style={{ overflowY: 'auto', paddingRight: 4 }}>
+      {/* ── Main : chat | table | rail ── */}
+      <div className="game-main">
+        {/* Left: chat */}
+        <div className="side-panel">
+          <Chat
+            messages={chatMessages}
+            available={chatChannels}
+            canWrite={canWrite}
+            onSend={(message) => send('chat:send', { message })}
+            log={gameLog}
+          />
+        </div>
 
-          {!isAlive && (
-            <div className="dead-banner">💀 VOUS ÊTES ÉLIMINÉ — MODE SPECTATEUR</div>
+        {/* Center: table scene */}
+        <div className="table-scene" style={{ backgroundImage: `url('${sceneBg}')` }}>
+          <div className="table-oval" />
+
+          {/* Contextual banners */}
+          {gazetteNow.map((e, i) =>
+            e.noElimination ? (
+              <div key={i} className="scene-banner gold" style={{ top: 12 + i * 54 }}>
+                🌙 La nuit fut calme. Personne n&apos;a perdu la vie.
+              </div>
+            ) : (
+              <div key={i} className="scene-banner danger" style={{ top: 12 + i * 54 }}>
+                ☠️ <b>{e.eliminatedUsername}</b> a été éliminé — {ROLE_LABELS[e.eliminatedRole] ?? e.eliminatedRole}
+                {e.will ? <div className="dim" style={{ fontSize: 12, fontStyle: 'italic' }}>📜 « {e.will} »</div> : null}
+              </div>
+            ),
           )}
-
-          {/* Gazette */}
-          {phase === 'MORNING_GAZETTE' && gazette.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              {gazette.filter((e) => e.round === round).map((e, i) =>
-                e.noElimination ? (
-                  <div key={i} className="gazette-entry peaceful">
-                    🌙 La nuit fut calme. Personne n&apos;a perdu la vie.
-                  </div>
-                ) : (
-                  <div key={i} className="gazette-entry">
-                    ☠️ <b>{e.eliminatedUsername}</b> a été éliminé cette nuit —{' '}
-                    rôle révélé : <b>{ROLE_LABELS[e.eliminatedRole] ?? e.eliminatedRole}</b>
-                    {e.will ? (
-                      <div className="dim" style={{ fontStyle: 'italic', marginTop: 4 }}>
-                        📜 « {e.will} »
-                      </div>
-                    ) : null}
-                  </div>
-                ),
-              )}
+          {detective && phase !== 'MORNING_GAZETTE' && (
+            <div className="scene-banner info">
+              {detective.kind === 'role'
+                ? <>🕵️ <b>{detective.targetUsername}</b> est <b style={{ color: 'var(--gold-hi)' }}>{ROLE_LABELS[detective.role] ?? detective.role}</b></>
+                : <>🔍 <b>{detective.targetUsername}</b> est du camp{' '}
+                    <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
+                      {detective.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
+                    </b></>}
             </div>
           )}
-
-          {/* Investigation result (Detective or Consigliere) */}
-          {detective && (
-            <div className="gazette-entry info">
-              {detective.kind === 'role' ? (
-                <>
-                  🕵️ Votre enquête : <b>{detective.targetUsername}</b> est{' '}
-                  <b style={{ color: 'var(--gold-hi)' }}>
-                    {ROLE_LABELS[detective.role] ?? detective.role}
-                  </b>
-                </>
-              ) : (
-                <>
-                  🔍 Votre enquête : <b>{detective.targetUsername}</b> est du camp{' '}
-                  <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
-                    {detective.team === 'MAFIA' ? 'MAFIA' : 'VILLAGE'}
-                  </b>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Trial / sentence banners */}
-          {trial && (phase === 'TRIAL' || phase === 'JUDGMENT') && (
-            <div className="gazette-entry" style={{ marginBottom: 14 }}>
+          {trial && (phase === 'TRIAL' || phase === 'JUDGMENT') && !detective && (
+            <div className="scene-banner danger">
               ⚖️ <b>{trial.accusedUsername}</b> est accusé
               {trial.accusedId === session.userId && ' — défendez-vous dans le chat !'}
-              {trial.accusedId !== session.userId &&
-                (phase === 'TRIAL' ? ' — il présente sa défense…' : ' — votez son sort.')}
             </div>
           )}
-          {sentence && (
-            <div className={`gazette-entry ${sentence.type === 'acquitted' ? 'peaceful' : ''}`}
-                 style={{ marginBottom: 14 }}>
-              {sentence.type === 'executed' ? (
-                <>
-                  ☠️ <b>{sentence.username}</b> a été exécuté —{' '}
-                  rôle révélé : <b>{ROLE_LABELS[sentence.role] ?? sentence.role}</b>
-                  {sentence.will ? (
-                    <div className="dim" style={{ fontStyle: 'italic', marginTop: 4 }}>
-                      📜 « {sentence.will} »
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <>🕊️ Le doute a profité à l&apos;accusé — acquitté.</>
-              )}
+          {sentence && phase === 'SENTENCE' && (
+            <div className={`scene-banner ${sentence.type === 'acquitted' ? 'gold' : 'danger'}`}>
+              {sentence.type === 'executed'
+                ? <>🔨 <b>{sentence.username}</b> exécuté — {ROLE_LABELS[sentence.role] ?? sentence.role}
+                    {sentence.will ? <div className="dim" style={{ fontSize: 12, fontStyle: 'italic' }}>📜 « {sentence.will} »</div> : null}</>
+                : <>🕊️ L&apos;accusé a été acquitté.</>}
             </div>
           )}
 
-          {/* Night prompt / confirmation */}
-          {phase === 'NIGHT' && isAlive && (
-            <div className="gazette-entry gold" style={{ marginBottom: 14 }}>
-              {canActAtNight ? (
+          {!isAlive && (
+            <div className="scene-banner danger" style={{ top: 'auto', bottom: 12 }}>
+              💀 VOUS ÊTES ÉLIMINÉ — MODE SPECTATEUR
+            </div>
+          )}
+
+          {/* Seats */}
+          {players.map((p, i) => {
+            const voteCount  = (votes[p.userId] ?? []).length;
+            const selectable = p.isAlive && p.userId !== session.userId &&
+              (canActAtNight || (phase === 'DAY_VOTE' && isAlive));
+            const selected = (phase === 'NIGHT' && nightTarget === p.userId) ||
+                             (phase === 'DAY_VOTE' && myVote === p.userId);
+            const avatarUrl = p.avatarId ? avatarMap[p.avatarId] : null;
+            const isOffline = offline.includes(p.userId);
+            return (
+              <div key={p.userId}
+                   className={[
+                     'seat',
+                     p.isAlive ? '' : 'dead',
+                     selectable ? 'selectable' : '',
+                     selected ? 'selected' : '',
+                     p.userId === session.userId ? 'me' : '',
+                   ].join(' ')}
+                   style={seatStyle(i)}
+                   onClick={() => selectable && clickPlayer(p)}>
+                <div className="seat-avatar">
+                  <span className="seat-num">{i + 1}</span>
+                  {avatarUrl
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={avatarUrl} alt="" />
+                    : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
+                </div>
+                <div className="seat-name">
+                  {p.username}{isOffline ? ' 📡' : ''}
+                </div>
+                {phase === 'DAY_VOTE' && voteCount > 0 && p.isAlive && (
+                  <div className="seat-votes">{voteCount} vote{voteCount > 1 ? 's' : ''}</div>
+                )}
+                {!p.isAlive && p.role && (
+                  <div className="seat-name" style={{ fontSize: 9, color: 'var(--text-dim)' }}>
+                    {ROLE_LABELS[p.role] ?? p.role}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right: rail */}
+        <div className="side-panel">
+          {/* Joueurs */}
+          <div className="panel-card">
+            <div className="panel-title">JOUEURS <span className="dim">{aliveCount}/{players.length}</span></div>
+            {players.map((p) => (
+              <div key={p.userId} className={`roster-row ${p.isAlive ? '' : 'dead-row'}`}>
+                <span className="dot" />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.username}
+                  {p.userId === session.userId ? ' (vous)' : ''}
+                  {p.isBot && <span className="bot-chip">BOT</span>}
+                </span>
+                {!p.isAlive && <span style={{ fontSize: 11 }}>💀</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Votation */}
+          {(phase === 'DAY_VOTE' || phase === 'JUDGMENT') && (
+            <div className="panel-card">
+              <div className="panel-title">
+                VOTATION ACTUELLE
+                {remaining > 0 && <span className="timer-bubble">{remaining}s</span>}
+              </div>
+              {phase === 'JUDGMENT' && judgment ? (
                 <>
-                  {ROLE_EMOJI[role.role]} {NIGHT_PROMPTS[role.role]}
-                  {actionConfirmed && (
-                    <div style={{ color: '#2ecc71', fontSize: 13, marginTop: 4 }}>
-                      ✓ Action enregistrée — modifiable jusqu&apos;à la fin de la nuit.
+                  <div className="dim" style={{ fontSize: 13, marginBottom: 4 }}>
+                    {trial?.accusedUsername} est accusé
+                  </div>
+                  <div className="votation-vs">
+                    <div className="side guilty">
+                      <div className="num">{judgment.guilty}</div>
+                      <div className="lbl">COUPABLE</div>
+                    </div>
+                    <span className="vs">VS</span>
+                    <div className="side innocent">
+                      <div className="num">{judgment.innocent}</div>
+                      <div className="lbl">INNOCENT</div>
+                    </div>
+                  </div>
+                  {judgment.abstain > 0 && (
+                    <div className="dim" style={{ textAlign: 'center', fontSize: 11 }}>
+                      {judgment.abstain} abstention{judgment.abstain > 1 ? 's' : ''}
                     </div>
                   )}
                 </>
               ) : (
-                <span className="dim" style={{ fontStyle: 'italic' }}>
-                  🌙 La ville dort. Vous n&apos;avez pas d&apos;action cette nuit.
-                </span>
+                <>
+                  {Object.entries(votes)
+                    .map(([id, voters]) => ({
+                      p: players.find((x) => x.userId === id),
+                      n: voters.length,
+                    }))
+                    .filter((x) => x.p && x.n > 0)
+                    .sort((a, b) => b.n - a.n)
+                    .slice(0, 4)
+                    .map((x) => (
+                      <div key={x.p.userId} className="roster-row">
+                        <span style={{ flex: 1 }}>{x.p.username}</span>
+                        <span className="vote-badge">{x.n}</span>
+                      </div>
+                    ))}
+                  {Object.values(votes).every((v) => v.length === 0) && (
+                    <div className="dim" style={{ fontSize: 12, fontStyle: 'italic' }}>
+                      Aucun vote pour l&apos;instant.
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
-          {phase === 'DAY_VOTE' && isAlive && (
-            <p className="dim" style={{ fontSize: 13, fontStyle: 'italic', marginBottom: 10 }}>
-              Cliquez sur un joueur pour l&apos;envoyer au procès.
-            </p>
-          )}
 
-          {/* Players */}
-          <div className="players-grid">
-            {players.map((p) => {
-              const voteCount  = (votes[p.userId] ?? []).length;
-              const selectable = p.isAlive && p.userId !== session.userId &&
-                (canActAtNight || (phase === 'DAY_VOTE' && isAlive));
-              const selected = (phase === 'NIGHT' && nightTarget === p.userId) ||
-                               (phase === 'DAY_VOTE' && myVote === p.userId);
-              const isOffline = offline.includes(p.userId);
-              const avatarUrl = p.avatarId ? avatarMap[p.avatarId] : null;
-              return (
-                <div key={p.userId}
-                     className={[
-                       'player-tile',
-                       p.isAlive ? '' : 'dead',
-                       selectable ? 'selectable' : '',
-                       selected ? 'selected' : '',
-                     ].join(' ')}
-                     onClick={() => selectable && clickPlayer(p)}>
-                  <div className="avatar">
-                    {avatarUrl
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={avatarUrl} alt="" />
-                      : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
+          {/* Ton rôle */}
+          {role && (
+            <div className="panel-card">
+              <div className="panel-title">TON RÔLE</div>
+              <div className="role-card-mini">
+                <div className="role-ico"
+                     style={{ borderColor: role.team === 'MAFIA' ? 'rgba(192,57,43,.5)' : undefined }}>
+                  {roleHidden ? '❓' : (ROLE_EMOJI[role.role] ?? '❓')}
+                </div>
+                <div>
+                  <div className="role-name"
+                       style={{ color: roleHidden ? 'var(--text-dim)'
+                                : role.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--gold-hi)' }}>
+                    {roleHidden ? '•••••' : (ROLE_LABELS[role.role] ?? role.role).toUpperCase()}
                   </div>
-                  <div className="name">
-                    {p.username}
-                    {p.userId === session.userId ? ' (vous)' : ''}
-                    {p.isBot && <span className="bot-chip">BOT</span>}
-                    {isOffline ? ' 📡' : ''}
-                  </div>
-                  <div className="sub">
-                    {!p.isAlive
-                      ? `💀 ${ROLE_LABELS[p.role] ?? ''}`
-                      : phase === 'DAY_VOTE' && voteCount > 0
-                        ? <span className="vote-badge">{voteCount} vote{voteCount > 1 ? 's' : ''}</span>
-                        : ' '}
+                  <div className="role-team">
+                    {roleHidden ? 'Rôle masqué' : `Équipe : ${role.team === 'MAFIA' ? 'Mafia' : 'Village'}`}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Judgment: live votes + buttons */}
-          {phase === 'JUDGMENT' && trial && (
-            <div className="card" style={{ marginTop: 16, padding: 14 }}>
-              <div className="cinzel" style={{ fontSize: 12, letterSpacing: 2, marginBottom: 8,
-                                               color: 'var(--gold)' }}>
-                LE SORT DE {trial.accusedUsername?.toUpperCase()}
-                {judgment && (
-                  <span className="dim" style={{ marginLeft: 10, letterSpacing: 0 }}>
-                    ⚖️ {judgment.guilty} coupable · {judgment.innocent} innocent · {judgment.abstain} abst.
-                  </span>
-                )}
               </div>
-              {(judgment?.votes ?? []).map((v) => (
-                <div key={v.userId} className="judgment-row">
-                  <span>{v.username}</span>
-                  <span className={`verdict-${v.verdict}`}>
-                    {v.verdict === 'GUILTY' ? 'COUPABLE'
-                      : v.verdict === 'INNOCENT' ? 'INNOCENT'
-                      : v.verdict === 'ABSTAIN' ? 'ABSTENTION'
-                      : 'réfléchit…'}
-                  </span>
-                </div>
-              ))}
-              {isAlive && trial.accusedId !== session.userId && (
-                <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'center' }}>
-                  <button className={`danger ${myVerdict === 'GUILTY' ? 'primary' : ''}`}
-                          onClick={() => castVerdict('GUILTY')}>COUPABLE</button>
-                  <button className="primary"
-                          onClick={() => castVerdict('INNOCENT')}>INNOCENT</button>
-                  <button onClick={() => castVerdict('ABSTAIN')}>ABSTENTION</button>
-                </div>
-              )}
-              {myVerdict && (
-                <p className="dim" style={{ textAlign: 'center', fontSize: 12, marginTop: 8 }}>
-                  Votre vote : {myVerdict === 'GUILTY' ? 'Coupable' : myVerdict === 'INNOCENT' ? 'Innocent' : 'Abstention'}
-                </p>
-              )}
+              <button className="reveal-btn" onClick={() => setRoleHidden(!roleHidden)}>
+                {roleHidden ? '👁 VOIR TON RÔLE' : '🙈 MASQUER'}
+              </button>
             </div>
           )}
-
-          {/* Bottom actions: dossier + son + skip */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18 }}>
-            <button style={{ fontSize: 11 }} onClick={() => setPanelOpen(true)}>
-              📖 DOSSIER
-            </button>
-            <button style={{ fontSize: 11 }}
-                    title={muted ? 'Activer le son' : 'Couper le son'}
-                    onClick={() => setMuted(toggleMute())}>
-              {muted ? '🔇' : '🔊'}
-            </button>
-            {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
-              <button style={{ fontSize: 11 }} onClick={() => send('phase:skip_vote', {})}>
-                ⏭ PASSER LA PHASE
-                {skipInfo ? ` (${skipInfo.count}/${skipInfo.total})` : ''}
-              </button>
-            )}
-          </div>
         </div>
+      </div>
 
-        {/* ── Right: chat ── */}
-        <Chat
-          messages={chatMessages}
-          available={chatChannels}
-          canWrite={canWrite}
-          onSend={(message) => send('chat:send', { message })}
-        />
+      {/* ── Bottom actions ── */}
+      <div className="game-actions">
+        {phase === 'JUDGMENT' && isAlive && trial && trial.accusedId !== session.userId ? (
+          <>
+            <button className="danger" style={{ padding: '14px 24px' }}
+                    onClick={() => castVerdict('GUILTY')}>
+              COUPABLE {myVerdict === 'GUILTY' ? '✓' : ''}
+            </button>
+            <button className="primary" style={{ padding: '14px 24px' }}
+                    onClick={() => castVerdict('INNOCENT')}>
+              INNOCENT {myVerdict === 'INNOCENT' ? '✓' : ''}
+            </button>
+            <button style={{ padding: '14px 24px' }}
+                    onClick={() => castVerdict('ABSTAIN')}>
+              ABSTENTION {myVerdict === 'ABSTAIN' ? '✓' : ''}
+            </button>
+          </>
+        ) : (
+          <div className="action-main">
+            <span className="cinzel">{mainAction.label}</span>
+            {mainAction.sub && <span className="sub">{mainAction.sub}</span>}
+          </div>
+        )}
+
+        <button className="action-sq" title="Dossier de partie"
+                onClick={() => setPanelOpen(true)}>
+          📖<span className="lbl">CARNET</span>
+        </button>
+        {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
+          <button className="action-sq" title="Passer la phase"
+                  onClick={() => send('phase:skip_vote', {})}>
+            ⏭<span className="lbl">{skipInfo ? `${skipInfo.count}/${skipInfo.total}` : 'PASSER'}</span>
+          </button>
+        )}
       </div>
 
       {/* ── Dossier de partie (drawer) ── */}

@@ -2,28 +2,34 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-const CHANNEL_LABELS = { day: 'Jour', mafia: 'Mafia', dead: 'Morts' };
+const CHANNEL_LABELS = {
+  day:   '# VILLE',
+  mafia: '# MAFIA',
+  dead:  '# MORTS',
+  sys:   '# SYSTÈME',
+};
 
 /**
- * In-game chat with server-resolved channels.
- * The server decides where a message lands — the tabs here only filter
- * the local view. `available` controls which tabs are shown.
+ * In-game chat with server-resolved channels + a local #SYSTÈME feed
+ * (the chronological game log). `available` controls the visible tabs.
  */
-export default function Chat({ messages, available, canWrite, onSend }) {
-  const [tab, setTab]     = useState('day');
-  const [text, setText]   = useState('');
-  const bottomRef         = useRef(null);
+export default function Chat({ messages, available, canWrite, onSend, log = [] }) {
+  const [tab, setTab]   = useState('day');
+  const [text, setText] = useState('');
+  const bottomRef       = useRef(null);
 
-  // If the active tab becomes unavailable (e.g. day → night), fall back.
+  const tabs = [...available, 'sys'];
+
   useEffect(() => {
-    if (!available.includes(tab)) setTab(available[0] ?? 'day');
-  }, [available, tab]);
+    if (!tabs.includes(tab)) setTab(available[0] ?? 'day');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available.join(','), tab]);
 
-  const visible = messages.filter((m) => m.channel === tab);
+  const visible = tab === 'sys' ? [] : messages.filter((m) => m.channel === tab);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [visible.length]);
+  }, [visible.length, tab, log.length]);
 
   function submit(e) {
     e.preventDefault();
@@ -34,9 +40,9 @@ export default function Chat({ messages, available, canWrite, onSend }) {
   }
 
   return (
-    <div className="chat card" style={{ padding: 14 }}>
+    <div className="chat panel-card" style={{ flex: 1, minHeight: 0 }}>
       <div className="chat-tabs">
-        {available.map((ch) => (
+        {tabs.map((ch) => (
           <button key={ch}
                   className={`chat-tab ${ch} ${tab === ch ? 'active' : ''}`}
                   onClick={() => setTab(ch)}>
@@ -46,33 +52,46 @@ export default function Chat({ messages, available, canWrite, onSend }) {
       </div>
 
       <div className="chat-messages">
-        {visible.length === 0 && (
-          <div className="dim" style={{ fontStyle: 'italic', fontSize: 13 }}>
-            Aucun message.
-          </div>
-        )}
-        {visible.map((m, i) => (
-          <div key={i} className={`chat-msg ${m.channel}`}>
-            <span className="author">{m.username}</span>
-            {m.isBot && <span className="bot-chip">BOT</span>}
-            {m.ts && (
-              <span className="time">
-                {new Date(m.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+        {tab === 'sys' ? (
+          log.length === 0
+            ? <div className="dim" style={{ fontStyle: 'italic', fontSize: 13 }}>Aucun événement.</div>
+            : log.map((e, i) => (
+                <div key={i} className="chat-msg" style={{ color: 'var(--text-dim)' }}>
+                  {e.icon} {e.text}
+                  <span className="time">T{e.round}</span>
+                </div>
+              ))
+        ) : (
+          <>
+            {visible.length === 0 && (
+              <div className="dim" style={{ fontStyle: 'italic', fontSize: 13 }}>
+                Aucun message.
+              </div>
             )}
-            <div>{m.message}</div>
-          </div>
-        ))}
+            {visible.map((m, i) => (
+              <div key={i} className={`chat-msg ${m.channel}`}>
+                <span className="author">{m.username}</span>
+                {m.isBot && <span className="bot-chip">BOT</span>}
+                {m.ts && (
+                  <span className="time">
+                    {new Date(m.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+                <div>{m.message}</div>
+              </div>
+            ))}
+          </>
+        )}
         <div ref={bottomRef} />
       </div>
 
       <form className="chat-input" onSubmit={submit}>
         <input value={text}
                maxLength={300}
-               placeholder={canWrite ? 'Votre message…' : 'Chat fermé pour vous'}
-               disabled={!canWrite}
+               placeholder={canWrite ? 'Écrire un message…' : 'Chat fermé pour vous'}
+               disabled={!canWrite || tab === 'sys'}
                onChange={(e) => setText(e.target.value)} />
-        <button type="submit" disabled={!canWrite || !text.trim()}>➤</button>
+        <button type="submit" disabled={!canWrite || tab === 'sys' || !text.trim()}>➤</button>
       </form>
     </div>
   );
