@@ -41,6 +41,10 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
 
   return (
     <div className="chat panel-card" style={{ flex: 1, minHeight: 0 }}>
+      <div className="chat-header">
+        <span>CHAT</span>
+        <small>{canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}</small>
+      </div>
       <div className="chat-tabs">
         {tabs.map((ch) => (
           <button key={ch}

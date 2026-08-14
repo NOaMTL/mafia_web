@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { getAvatarMap } from '@/lib/avatars';
+import BrandMark from '@/components/BrandMark';
+import PageHeading from '@/components/PageHeading';
 
 export default function LobbyWait() {
   const router  = useRouter();
@@ -82,27 +84,30 @@ export default function LobbyWait() {
   const players = lobby.players ?? [];
 
   return (
-    <div className="page" style={{ maxWidth: 560 }}>
+    <main className="page meta-page lobby-wait">
       <div className="ambiance ambiance-home on" />
-      <h1 className="title-gold" style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>
-        SALLE D&apos;ATTENTE
-      </h1>
-      <p style={{ textAlign: 'center', marginBottom: 24 }}>
-        <span className="dim">Code : </span>
-        <span className="cinzel"
+      <div className="lobby-wait-nav">
+        <BrandMark href="/lobby" compact />
+        <button onClick={() => router.push('/lobby')}>QUITTER LA SALLE</button>
+      </div>
+      <PageHeading eyebrow="LA TABLE SE PRÉPARE" title="SALLE D’ATTENTE"
+                   subtitle="Invitez les derniers joueurs et signalez-vous prêt." />
+      <div className="lobby-code-block">
+        <span>CODE D&apos;INVITATION</span>
+        <strong
               title="Cliquer pour copier"
-              style={{ color: 'var(--gold-hi)', fontSize: 22, letterSpacing: 6, cursor: 'pointer' }}
               onClick={() => {
                 navigator.clipboard?.writeText(lobby.code);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}>
           {lobby.code}
-        </span>
-        {copied && <span style={{ color: 'var(--green)', fontSize: 13, marginLeft: 10 }}>✓ copié</span>}
-      </p>
+        </strong>
+        <small>{copied ? '✓ CODE COPIÉ' : 'CLIQUER POUR COPIER'}</small>
+      </div>
 
-      <div className="card">
+      <div className="lobby-wait-grid">
+      <section className="card lobby-player-card">
         <p className="dim" style={{ fontSize: 13, marginBottom: 14 }}>
           {players.length} joueur{players.length > 1 ? 's' : ''} — minimum 4, tous prêts pour lancer
         </p>
@@ -138,10 +143,10 @@ export default function LobbyWait() {
           </button>
           <button onClick={addBot}>+ BOT</button>
         </div>
-      </div>
+      </section>
 
       {/* ── Lobby chat ── */}
-      <div className="card" style={{ marginTop: 16, padding: 14 }}>
+      <section className="card lobby-chat-card">
         <div className="cinzel" style={{ fontSize: 11, letterSpacing: 2,
                                          color: 'var(--gold)', marginBottom: 8 }}>
           💬 DISCUSSION
@@ -166,7 +171,8 @@ export default function LobbyWait() {
                  onChange={(e) => setChatText(e.target.value)} />
           <button type="submit" disabled={!chatText.trim()}>➤</button>
         </form>
+      </section>
       </div>
-    </div>
+    </main>
   );
 }

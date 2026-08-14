@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import NavHeader from '@/components/NavHeader';
+import PageHeading from '@/components/PageHeading';
 
 export default function LobbyHome() {
   const router = useRouter();
@@ -39,30 +40,38 @@ export default function LobbyHome() {
   if (!session) return null;
 
   return (
-    <div className="page" style={{ maxWidth: 480 }}>
+    <main className="page meta-page lobby-home">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
 
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <button className="primary" style={{ padding: 16 }} disabled={busy} onClick={createLobby}>
-          CRÉER UNE PARTIE
-        </button>
+      <PageHeading eyebrow="QUEL SERA VOTRE PROCHAIN RÔLE ?" title="ENTREZ DANS LA VILLE"
+                   subtitle="Créez votre propre table ou rejoignez une partie grâce à son code secret." />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          <span className="dim" style={{ fontSize: 12 }}>ou</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-        </div>
+      <div className="lobby-choice-grid">
+        <section className="choice-card choice-create">
+          <div className="choice-number">01</div>
+          <div className="choice-icon">＋</div>
+          <h2>CRÉER UNE PARTIE</h2>
+          <p>Invitez vos proches et préparez une nouvelle nuit de soupçons.</p>
+          <button className="btn-gold" disabled={busy} onClick={createLobby}>
+            CRÉER MA TABLE <span>→</span>
+          </button>
+        </section>
 
-        <form onSubmit={joinLobby} style={{ display: 'flex', gap: 10 }}>
-          <input placeholder="CODE" value={code} maxLength={6}
-                 style={{ textTransform: 'uppercase', letterSpacing: 4, textAlign: 'center' }}
-                 onChange={(e) => setCode(e.target.value)} />
-          <button disabled={busy || !code.trim()} type="submit">REJOINDRE</button>
-        </form>
-
-        {error && <div className="error">{error}</div>}
+        <section className="choice-card">
+          <div className="choice-number">02</div>
+          <div className="choice-icon">⌁</div>
+          <h2>REJOINDRE UNE PARTIE</h2>
+          <p>Saisissez le code communiqué par l&apos;organisateur de la partie.</p>
+          <form onSubmit={joinLobby} className="join-form">
+            <input aria-label="Code de la partie" placeholder="CODE" value={code} maxLength={6}
+                   onChange={(e) => setCode(e.target.value)} />
+            <button disabled={busy || !code.trim()} type="submit">REJOINDRE</button>
+          </form>
+        </section>
       </div>
-    </div>
+      {error && <div className="meta-alert">{error}</div>}
+      <div className="lobby-footnote"><span /> 4 à 15 joueurs · parties de 15 à 30 minutes <span /></div>
+    </main>
   );
 }

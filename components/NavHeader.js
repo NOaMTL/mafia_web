@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { clearSession } from '@/lib/api';
+import BrandMark from '@/components/BrandMark';
 
 export default function NavHeader({ session, diamonds }) {
   const router = useRouter();
   return (
     <div className="nav-header">
-      <Link href="/lobby" style={{ textDecoration: 'none' }}>
-        <span className="title-gold cinzel" style={{ fontSize: 20 }}>MAFIA</span>
-      </Link>
+      <BrandMark href="/lobby" compact />
       <div className="nav-links">
         <Link href="/lobby">JOUER</Link>
         <Link href="/profile">PROFIL</Link>

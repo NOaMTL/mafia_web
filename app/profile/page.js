@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import NavHeader from '@/components/NavHeader';
+import PageHeading from '@/components/PageHeading';
 
 const ROLE_LABELS = {
   VILLAGER: 'Villageois', MAFIA: 'Mafioso', DETECTIVE: 'Détective',
@@ -40,21 +41,17 @@ export default function ProfilePage() {
   const locked   = achievements.filter((a) => !a.unlocked);
 
   return (
-    <div className="page" style={{ maxWidth: 720 }}>
+    <main className="page meta-page profile-page">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} diamonds={profile?.diamonds} />
 
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <h1 className="cinzel" style={{ fontSize: 22, letterSpacing: 2 }}>{session.username}</h1>
-        {profile?.diamonds != null && (
-          <div style={{ color: 'var(--blue)', marginTop: 6 }}>💎 {profile.diamonds} diamants</div>
-        )}
-      </div>
+      <PageHeading eyebrow="DOSSIER DU JOUEUR" title={session.username}
+                   subtitle={profile?.diamonds != null ? `${profile.diamonds} diamants disponibles` : 'Chargement du dossier…'} />
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, justifyContent: 'center' }}>
-        {['📊 STATS', `🏆 SUCCÈS (${unlocked.length}/${achievements.length})`, '🕰️ HISTORIQUE'].map((l, i) => (
-          <button key={i} className={tab === i ? 'primary' : ''} style={{ fontSize: 11 }}
+      <div className="meta-tabs">
+        {['STATISTIQUES', `SUCCÈS (${unlocked.length}/${achievements.length})`, 'HISTORIQUE'].map((l, i) => (
+          <button key={i} className={tab === i ? 'active' : ''}
                   onClick={() => setTab(i)}>{l}</button>
         ))}
       </div>
@@ -136,6 +133,6 @@ export default function ProfilePage() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   );
 }

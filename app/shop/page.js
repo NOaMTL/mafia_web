@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import NavHeader from '@/components/NavHeader';
+import PageHeading from '@/components/PageHeading';
 
 export default function ShopPage() {
   const router = useRouter();
@@ -64,25 +65,19 @@ export default function ShopPage() {
   const buyable  = avatars.filter((a) => !a.owned && !a.isPremium && a.price > 0);
 
   return (
-    <div className="page" style={{ maxWidth: 720 }}>
+    <main className="page meta-page shop-page">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} diamonds={diamonds} />
 
-      <h1 className="title-gold cinzel"
-          style={{ fontSize: 20, textAlign: 'center', marginBottom: 6 }}>
-        BOUTIQUE
-      </h1>
-      <p className="dim" style={{ textAlign: 'center', fontStyle: 'italic', marginBottom: 20 }}>
-        Personnalisez votre identité.
-      </p>
+      <PageHeading eyebrow="CHOISISSEZ LE VISAGE DE VOTRE MENSONGE" title="BOUTIQUE"
+                   subtitle="Personnalisez votre identité avant d’entrer dans la ville." />
 
       {message && (
         <p style={{ textAlign: 'center', marginBottom: 16, color: 'var(--gold-hi)' }}>{message}</p>
       )}
 
-      <div className="cinzel" style={{ fontSize: 12, letterSpacing: 2,
-                                       color: 'var(--gold)', margin: '10px 0' }}>
-        MES AVATARS ({owned.length})
+      <div className="section-label">
+        <span>MA COLLECTION</span><small>{owned.length} AVATAR{owned.length > 1 ? 'S' : ''}</small>
       </div>
       <div className="avatar-grid" style={{ marginBottom: 28 }}>
         {owned.map((a) => (
@@ -99,9 +94,8 @@ export default function ShopPage() {
         ))}
       </div>
 
-      <div className="cinzel" style={{ fontSize: 12, letterSpacing: 2,
-                                       color: 'var(--blue)', margin: '10px 0' }}>
-        💎 À DÉBLOQUER ({buyable.length})
+      <div className="section-label">
+        <span>À DÉBLOQUER</span><small>{buyable.length} DISPONIBLE{buyable.length > 1 ? 'S' : ''}</small>
       </div>
       <div className="avatar-grid">
         {buyable.map((a) => {
@@ -120,6 +114,6 @@ export default function ShopPage() {
       </div>
 
       {avatars.length === 0 && <p className="dim" style={{ textAlign: 'center' }}>Chargement…</p>}
-    </div>
+    </main>
   );
 }

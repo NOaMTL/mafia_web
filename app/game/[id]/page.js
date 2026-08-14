@@ -502,7 +502,7 @@ export default function GamePage() {
         </div>
 
         {/* Center: table scene */}
-        <div className="table-scene" style={{ backgroundImage: `url('${sceneBg}')` }}>
+        <div className={`table-scene scene-${ambiance || 'night'}`} style={{ backgroundImage: `url('${sceneBg}')` }}>
           <div className="table-oval" />
 
           {/* Contextual banners */}
@@ -544,7 +544,7 @@ export default function GamePage() {
           )}
 
           {!isAlive && (
-            <div className="scene-banner danger" style={{ top: 'auto', bottom: 12 }}>
+            <div className="scene-banner danger spectator-banner">
               💀 VOUS ÊTES ÉLIMINÉ — MODE SPECTATEUR
             </div>
           )}
@@ -590,12 +590,45 @@ export default function GamePage() {
               </div>
             );
           })}
+
+          {/* ── Contextual actions, anchored to the table ── */}
+          <div className="game-actions">
+            {phase === 'JUDGMENT' && isAlive && trial && trial.accusedId !== session.userId ? (
+              <>
+                <button className="danger verdict-btn" onClick={() => castVerdict('GUILTY')}>
+                  COUPABLE {myVerdict === 'GUILTY' ? '✓' : ''}
+                </button>
+                <button className="primary verdict-btn" onClick={() => castVerdict('INNOCENT')}>
+                  INNOCENT {myVerdict === 'INNOCENT' ? '✓' : ''}
+                </button>
+                <button className="verdict-btn" onClick={() => castVerdict('ABSTAIN')}>
+                  ABSTENTION {myVerdict === 'ABSTAIN' ? '✓' : ''}
+                </button>
+              </>
+            ) : (
+              <div className="action-main">
+                <span className="cinzel">{mainAction.label}</span>
+                {mainAction.sub && <span className="sub">{mainAction.sub}</span>}
+              </div>
+            )}
+
+            <button className="action-sq" title="Dossier de partie"
+                    onClick={() => setPanelOpen(true)}>
+              📖<span className="lbl">CARNET</span>
+            </button>
+            {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
+              <button className="action-sq" title="Passer la phase"
+                      onClick={() => send('phase:skip_vote', {})}>
+                ⏭<span className="lbl">{skipInfo ? `${skipInfo.count}/${skipInfo.total}` : 'PASSER'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Right: rail */}
         <div className="side-panel">
           {/* Joueurs */}
-          <div className="panel-card">
+          <div className="panel-card roster-panel">
             <div className="panel-title">JOUEURS <span className="dim">{aliveCount}/{players.length}</span></div>
             {players.map((p) => (
               <div key={p.userId} className={`roster-row ${p.isAlive ? '' : 'dead-row'}`}>
@@ -612,7 +645,7 @@ export default function GamePage() {
 
           {/* Votation */}
           {(phase === 'DAY_VOTE' || phase === 'JUDGMENT') && (
-            <div className="panel-card">
+            <div className="panel-card voting-panel">
               <div className="panel-title">
                 VOTATION ACTUELLE
                 {remaining > 0 && <span className="timer-bubble">{remaining}s</span>}
@@ -668,7 +701,7 @@ export default function GamePage() {
 
           {/* Ton rôle */}
           {role && (
-            <div className="panel-card">
+            <div className="panel-card role-panel">
               <div className="panel-title">TON RÔLE</div>
               <div className="role-card-mini">
                 <div className="role-ico"
@@ -692,42 +725,6 @@ export default function GamePage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* ── Bottom actions ── */}
-      <div className="game-actions">
-        {phase === 'JUDGMENT' && isAlive && trial && trial.accusedId !== session.userId ? (
-          <>
-            <button className="danger" style={{ padding: '14px 24px' }}
-                    onClick={() => castVerdict('GUILTY')}>
-              COUPABLE {myVerdict === 'GUILTY' ? '✓' : ''}
-            </button>
-            <button className="primary" style={{ padding: '14px 24px' }}
-                    onClick={() => castVerdict('INNOCENT')}>
-              INNOCENT {myVerdict === 'INNOCENT' ? '✓' : ''}
-            </button>
-            <button style={{ padding: '14px 24px' }}
-                    onClick={() => castVerdict('ABSTAIN')}>
-              ABSTENTION {myVerdict === 'ABSTAIN' ? '✓' : ''}
-            </button>
-          </>
-        ) : (
-          <div className="action-main">
-            <span className="cinzel">{mainAction.label}</span>
-            {mainAction.sub && <span className="sub">{mainAction.sub}</span>}
-          </div>
-        )}
-
-        <button className="action-sq" title="Dossier de partie"
-                onClick={() => setPanelOpen(true)}>
-          📖<span className="lbl">CARNET</span>
-        </button>
-        {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
-          <button className="action-sq" title="Passer la phase"
-                  onClick={() => send('phase:skip_vote', {})}>
-            ⏭<span className="lbl">{skipInfo ? `${skipInfo.count}/${skipInfo.total}` : 'PASSER'}</span>
-          </button>
-        )}
       </div>
 
       {/* ── Dossier de partie (drawer) ── */}

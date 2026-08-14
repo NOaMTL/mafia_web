@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSession, API_URL, getToken } from '@/lib/api';
 import { getAvatarMap } from '@/lib/avatars';
 import NavHeader from '@/components/NavHeader';
+import PageHeading from '@/components/PageHeading';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -30,17 +31,12 @@ export default function LeaderboardPage() {
   if (!session) return null;
 
   return (
-    <div className="page" style={{ maxWidth: 640 }}>
+    <main className="page meta-page leaderboard-page">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
 
-      <h1 className="title-gold cinzel"
-          style={{ fontSize: 20, textAlign: 'center', marginBottom: 6 }}>
-        CLASSEMENT
-      </h1>
-      <p className="dim" style={{ textAlign: 'center', fontStyle: 'italic', marginBottom: 22 }}>
-        Les familles les plus redoutées de la ville.
-      </p>
+      <PageHeading eyebrow="LES NOMS QUE LA VILLE N’OUBLIE PAS" title="CLASSEMENT"
+                   subtitle="Les familles les plus redoutées de la ville." />
 
       {rows === null && <p className="dim" style={{ textAlign: 'center' }}>Chargement…</p>}
       {rows?.length === 0 && (
@@ -53,7 +49,7 @@ export default function LeaderboardPage() {
         const url  = r.avatarId ? avatarMap[r.avatarId] : null;
         const isMe = r.username === session.username;
         return (
-          <div key={r.rank} className="achievement-row"
+          <div key={r.rank} className={`achievement-row leaderboard-row rank-${r.rank}`}
                style={isMe ? { borderColor: 'var(--gold)', background: 'rgba(184,150,62,.08)' } : undefined}>
             <span className="cinzel" style={{ width: 34, textAlign: 'center',
                                               fontSize: r.rank <= 3 ? 20 : 13,
@@ -86,6 +82,6 @@ export default function LeaderboardPage() {
           </div>
         );
       })}
-    </div>
+    </main>
   );
 }

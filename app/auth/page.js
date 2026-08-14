@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, saveSession, getSession } from '@/lib/api';
+import BrandMark from '@/components/BrandMark';
 
 function AuthForm() {
   const router = useRouter();
@@ -36,43 +38,65 @@ function AuthForm() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: 420 }}>
-      <div className="ambiance ambiance-home on" />
-      <div className="auth-hero" style={{ paddingTop: '8vh' }}>
-        <h1 className="title-gold logo cinzel" style={{ fontSize: 40 }}>MAFIA</h1>
-        <p className="tagline">La nuit tombe sur le village…</p>
-      </div>
+    <main className="auth-page">
+      <div className="auth-art" aria-hidden="true" />
+      <header className="auth-nav">
+        <BrandMark />
+        <Link href="/" className="auth-back">← RETOUR À L&apos;ACCUEIL</Link>
+      </header>
 
-      <form className="card" onSubmit={submit}
-            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {mode === 'register' && (
-          <input placeholder="Pseudo" value={username} required
-                 onChange={(e) => setUsername(e.target.value)} />
-        )}
-        <input placeholder="Email" type="email" value={email} required
-               onChange={(e) => setEmail(e.target.value)} />
-        <input placeholder="Mot de passe" type="password" value={password} required
-               onChange={(e) => setPassword(e.target.value)} />
+      <section className="auth-layout">
+        <div className="auth-story">
+          <div className="page-eyebrow">BIENVENUE DANS LA VILLE</div>
+          <h1>CHAQUE VISAGE<br />CACHE UN <span>SECRET.</span></h1>
+          <p>Entrez dans la partie. Observez, accusez, mentez — et survivez jusqu&apos;au lever du jour.</p>
+          <div className="auth-rule"><span>01</span> Faites confiance avec prudence</div>
+          <div className="auth-rule"><span>02</span> Votre rôle reste votre meilleur atout</div>
+        </div>
 
-        {error && <div className="error">{error}</div>}
+        <form className="auth-card" onSubmit={submit}>
+          <div className="auth-card-head">
+            <span>{mode === 'login' ? 'IDENTIFICATION' : 'NOUVEAU JOUEUR'}</span>
+            <h2>{mode === 'login' ? 'SE CONNECTER' : 'S’INSCRIRE'}</h2>
+            <p>{mode === 'login' ? 'Reprenez votre place autour de la table.' : 'Créez votre identité dans le village.'}</p>
+          </div>
 
-        <button className="btn-gold" disabled={busy} type="submit" style={{ padding: 14 }}>
-          {busy ? '…' : mode === 'login' ? 'SE CONNECTER' : 'CRÉER LE COMPTE'}
-        </button>
+          {mode === 'register' && (
+            <label>
+              <span>PSEUDO</span>
+              <input placeholder="Votre nom dans la ville" value={username} required
+                     autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
+            </label>
+          )}
+          <label>
+            <span>ADRESSE EMAIL</span>
+            <input placeholder="vous@exemple.fr" type="email" value={email} required
+                   autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label>
+            <span>MOT DE PASSE</span>
+            <input placeholder="••••••••" type="password" value={password} required
+                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                   onChange={(e) => setPassword(e.target.value)} />
+          </label>
 
-        <button type="button" style={{ border: 'none', background: 'none', fontSize: 12 }}
-                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
-          {mode === 'login' ? 'Pas de compte ? S\'inscrire' : 'Déjà un compte ? Se connecter'}
-        </button>
-      </form>
-    </div>
+          {error && <div className="auth-error">{error}</div>}
+
+          <button className="btn-gold auth-submit" disabled={busy} type="submit">
+            {busy ? '…' : mode === 'login' ? 'ENTRER DANS LA VILLE' : 'CRÉER MON COMPTE'}
+            <span aria-hidden="true">→</span>
+          </button>
+
+          <button type="button" className="auth-switch"
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
+            {mode === 'login' ? 'Pas encore de compte ? S’inscrire' : 'Déjà inscrit ? Se connecter'}
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 
 export default function AuthPage() {
-  return (
-    <Suspense fallback={null}>
-      <AuthForm />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><AuthForm /></Suspense>;
 }

@@ -1,70 +1,49 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import { ROLE_GUIDE, PHASE_GUIDE } from '@/lib/roleGuide';
 import NavHeader from '@/components/NavHeader';
+import PageHeading from '@/components/PageHeading';
 
 export default function GuidePage() {
-  const router = useRouter();
   const [session, setSession] = useState(null);
   const [tab, setTab]         = useState(0);
 
   useEffect(() => {
-    const s = getSession();
-    if (!s) { router.replace('/'); return; }
-    setSession(s);
-  }, [router]);
-
-  if (!session) return null;
+    setSession(getSession());
+  }, []);
 
   return (
-    <div className="page" style={{ maxWidth: 680 }}>
+    <main className="page meta-page guide-page">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
 
-      <h1 className="title-gold cinzel"
-          style={{ fontSize: 20, textAlign: 'center', marginBottom: 18 }}>
-        GUIDE DU JEU
-      </h1>
+      <PageHeading eyebrow="APPRENEZ LES RÈGLES DE LA NUIT" title="GUIDE DU JEU"
+                   subtitle="Connaître chaque rôle ne garantit pas la victoire. Mais cela aide à reconnaître un mensonge." />
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
-        <button className={tab === 0 ? 'primary' : ''} style={{ fontSize: 11 }}
-                onClick={() => setTab(0)}>🎭 LES RÔLES</button>
-        <button className={tab === 1 ? 'primary' : ''} style={{ fontSize: 11 }}
-                onClick={() => setTab(1)}>🕰️ UNE PARTIE</button>
+      <div className="meta-tabs">
+        <button className={tab === 0 ? 'active' : ''} onClick={() => setTab(0)}>LES RÔLES</button>
+        <button className={tab === 1 ? 'active' : ''} onClick={() => setTab(1)}>DÉROULEMENT D&apos;UNE PARTIE</button>
       </div>
 
-      {tab === 0 && ROLE_GUIDE.map((r) => (
-        <div key={r.key} className="card" style={{ padding: 16, marginBottom: 12 }}>
+      {tab === 0 && <div className="role-guide-grid">{ROLE_GUIDE.map((r) => (
+        <article key={r.key} className="role-guide-card" style={{ '--role-color': r.color }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <span style={{ fontSize: 26 }}>{r.emoji}</span>
+            <span className="role-guide-icon">{r.emoji}</span>
             <div>
-              <div className="cinzel" style={{ color: r.color, fontSize: 15, fontWeight: 700 }}>
-                {r.name}
-              </div>
-              <div className="dim" style={{ fontSize: 10, letterSpacing: 2 }}>
-                CAMP {r.team}
-              </div>
+              <h2>{r.name}</h2>
+              <div className="role-team-label">CAMP {r.team}</div>
             </div>
           </div>
-          <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.68)', lineHeight: 1.5 }}>
-            {r.description}
-          </p>
-          {r.nightAction && (
-            <p style={{ fontSize: 13.5, color: r.color, fontStyle: 'italic', marginTop: 8 }}>
-              🌙 {r.nightAction}
-            </p>
-          )}
-          <p style={{ fontSize: 13, color: 'var(--gold)', fontStyle: 'italic', marginTop: 8 }}>
-            💡 {r.tip}
-          </p>
-        </div>
-      ))}
+          <p>{r.description}</p>
+          {r.nightAction && <div className="role-detail">NUIT · {r.nightAction}</div>}
+          <div className="role-tip">CONSEIL · {r.tip}</div>
+        </article>
+      ))}</div>}
 
       {tab === 1 && (
-        <div className="card" style={{ padding: 20 }}>
+        <div className="phase-timeline">
           {PHASE_GUIDE.map((p, i) => (
             <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < PHASE_GUIDE.length - 1 ? 22 : 0 }}>
               <div style={{ textAlign: 'center' }}>
@@ -88,6 +67,6 @@ export default function GuidePage() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   );
 }
