@@ -35,13 +35,12 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: 420, paddingTop: 80 }}>
-      <h1 className="title-gold" style={{ textAlign: 'center', fontSize: 36, marginBottom: 4 }}>
-        MAFIA
-      </h1>
-      <p className="dim" style={{ textAlign: 'center', fontStyle: 'italic', marginBottom: 32 }}>
-        La nuit tombe sur le village…
-      </p>
+    <div className="page" style={{ maxWidth: 420 }}>
+      <div className="ambiance ambiance-home on" />
+      <div className="auth-hero">
+        <h1 className="title-gold logo cinzel">MAFIA</h1>
+        <p className="tagline">La nuit tombe sur le village…</p>
+      </div>
 
       <form className="card" onSubmit={submit}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

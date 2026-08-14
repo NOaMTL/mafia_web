@@ -65,6 +65,7 @@ export default function ShopPage() {
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
+      <div className="ambiance ambiance-home on" />
       <NavHeader session={session} diamonds={diamonds} />
 
       <h1 className="title-gold cinzel"

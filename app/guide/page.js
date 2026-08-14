@@ -21,6 +21,7 @@ export default function GuidePage() {
 
   return (
     <div className="page" style={{ maxWidth: 680 }}>
+      <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
 
       <h1 className="title-gold cinzel"

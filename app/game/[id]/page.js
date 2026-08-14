@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { getAvatarMap } from '@/lib/avatars';
 import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
 
@@ -52,7 +53,9 @@ export default function GamePage() {
   const [phase, setPhase]         = useState('');
   const [round, setRound]         = useState(1);
   const [endAt, setEndAt]         = useState(0);
+  const [startAt, setStartAt]     = useState(0);
   const [now, setNow]             = useState(Date.now());
+  const [avatarMap, setAvatarMap] = useState({});
   const [players, setPlayers]     = useState([]);
   const [role, setRole]           = useState(null);   // { role, team, description }
   const [votes, setVotes]         = useState({});
@@ -101,9 +104,12 @@ export default function GamePage() {
     const socket = getSocket();
     socketRef.current = socket;
 
+    getAvatarMap().then(setAvatarMap);
+
     const onSync = (d) => {
       setPhase(d.phase); setRound(d.round ?? 1);
       if (d.endAt)   setEndAt(d.endAt);
+      if (d.startAt) setStartAt(d.startAt);
       if (d.players) setPlayers(d.players);
       if (d.votes)   setVotes(d.votes);
     };
@@ -111,6 +117,7 @@ export default function GamePage() {
       setPhase(d.phase);
       if (d.round) setRound(d.round);
       setEndAt(d.endAt ?? 0);
+      setStartAt(d.startAt ?? 0);
       setSkipInfo(null);
       if (d.phase === 'NIGHT') {
         setNightTarget(null); setActionConfirmed(false);
@@ -220,6 +227,17 @@ export default function GamePage() {
     (isAlive && role?.team === 'MAFIA' && (phase === 'NIGHT' || phase === 'NIGHT_RESOLVE'));
 
   const remaining = endAt > now ? Math.round((endAt - now) / 1000) : 0;
+  const duration  = endAt > startAt ? endAt - startAt : 1;
+  const progress  = endAt > now ? Math.max(0, Math.min(100, ((endAt - now) / duration) * 100)) : 0;
+
+  // Ambiance class per phase
+  const ambiance =
+    phase === 'NIGHT' || phase === 'NIGHT_RESOLVE' ? 'night'
+    : phase === 'TRIAL' || phase === 'JUDGMENT' ? 'trial'
+    : phase === 'SENTENCE' ? 'danger'
+    : DAY_PHASES.includes(phase) ? 'day'
+    : '';
+  const bannerTone = ambiance === 'trial' ? 'danger' : ambiance;
 
   // ── Actions ─────────────────────────────────────────────────────────────────
   const send = useCallback((event, payload) =>
@@ -254,6 +272,7 @@ export default function GamePage() {
   if (winner) {
     return (
       <div className="page" style={{ maxWidth: 560, textAlign: 'center', paddingTop: 50 }}>
+        <div className={`ambiance on ${winner.winner === 'MAFIA' ? 'ambiance-danger' : 'ambiance-day'}`} />
         <h1 className="title-gold" style={{ fontSize: 30, marginBottom: 6 }}>
           {winner.winner === 'MAFIA' ? '🔪 LA MAFIA TRIOMPHE' : '🏘️ LE VILLAGE TRIOMPHE'}
         </h1>
@@ -294,10 +313,11 @@ export default function GamePage() {
   if (phase === 'ROLE_REVEAL') {
     return (
       <div className="page">
+        <div className="ambiance ambiance-night on" />
         {role ? (
           <div className={`role-reveal ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}>
             <div className="dim" style={{ fontSize: 11, letterSpacing: 4 }}>VOTRE RÔLE</div>
-            <div style={{ fontSize: 52, marginTop: 12 }}>{ROLE_EMOJI[role.role] ?? '❓'}</div>
+            <div className="role-icon">{ROLE_EMOJI[role.role] ?? '❓'}</div>
             <div className="role-name cinzel"
                  style={{ color: role.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--gold-hi)' }}>
               {(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}
@@ -323,11 +343,13 @@ export default function GamePage() {
   if (phase === 'NIGHT_RESOLVE' && !(role?.team === 'MAFIA' && isAlive)) {
     return (
       <div className="page">
+        <div className="ambiance ambiance-night on" />
         <div className="phase-banner">
           <div className="dim" style={{ fontSize: 11, letterSpacing: 3 }}>TOUR {round}</div>
           <div className="phase-name">🌘 {PHASE_LABELS[phase]}</div>
         </div>
         <div className="suspense">
+          <span className="moon">🌘</span>
           {nightMsg || 'Les événements de la nuit se déroulent…'}
         </div>
         <ToastZone toasts={toasts} />
@@ -338,10 +360,16 @@ export default function GamePage() {
   // ═══ Main board ═══
   return (
     <div className="page">
+      {/* Ambiance overlays (cross-fade between phases) */}
+      <div className={`ambiance ambiance-night ${ambiance === 'night' ? 'on' : ''}`} />
+      <div className={`ambiance ambiance-day ${ambiance === 'day' ? 'on' : ''}`} />
+      <div className={`ambiance ambiance-trial ${ambiance === 'trial' ? 'on' : ''}`} />
+      <div className={`ambiance ambiance-danger ${ambiance === 'danger' ? 'on' : ''}`} />
+
       {/* ── Phase banner ── */}
-      <div className="phase-banner">
+      <div className={`phase-banner ${bannerTone}`}>
         <div className="dim" style={{ fontSize: 11, letterSpacing: 3 }}>TOUR {round}</div>
-        <div className="phase-name">
+        <div className="phase-name" key={phase}>
           {phase === 'NIGHT' ? '🌙 ' : ''}{PHASE_LABELS[phase] ?? phase ?? '…'}
         </div>
         {role && (
@@ -354,7 +382,13 @@ export default function GamePage() {
           </div>
         )}
         {remaining > 0 && (
-          <div className="dim" style={{ fontSize: 12, marginTop: 6 }}>⏱ {remaining}s</div>
+          <>
+            <div className="timer-track">
+              <div className={`timer-fill ${remaining <= 10 ? 'urgent' : ''}`}
+                   style={{ width: `${progress}%` }} />
+            </div>
+            <div className="dim" style={{ fontSize: 12, marginTop: 5 }}>{remaining}s</div>
+          </>
         )}
       </div>
 
@@ -461,6 +495,7 @@ export default function GamePage() {
               const selected = (phase === 'NIGHT' && nightTarget === p.userId) ||
                                (phase === 'DAY_VOTE' && myVote === p.userId);
               const isOffline = offline.includes(p.userId);
+              const avatarUrl = p.avatarId ? avatarMap[p.avatarId] : null;
               return (
                 <div key={p.userId}
                      className={[
@@ -470,8 +505,14 @@ export default function GamePage() {
                        selected ? 'selected' : '',
                      ].join(' ')}
                      onClick={() => selectable && clickPlayer(p)}>
+                  <div className="avatar">
+                    {avatarUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={avatarUrl} alt="" />
+                      : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
+                  </div>
                   <div className="name">
-                    {p.username}{p.isBot ? ' 🤖' : ''}
+                    {p.username}
                     {p.userId === session.userId ? ' (vous)' : ''}
                     {isOffline ? ' 📡' : ''}
                   </div>
@@ -479,7 +520,7 @@ export default function GamePage() {
                     {!p.isAlive
                       ? `💀 ${ROLE_LABELS[p.role] ?? ''}`
                       : phase === 'DAY_VOTE' && voteCount > 0
-                        ? `${voteCount} vote${voteCount > 1 ? 's' : ''}`
+                        ? <span className="vote-badge">{voteCount} vote{voteCount > 1 ? 's' : ''}</span>
                         : ' '}
                   </div>
                 </div>

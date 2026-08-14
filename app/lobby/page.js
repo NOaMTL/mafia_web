@@ -40,6 +40,7 @@ export default function LobbyHome() {
 
   return (
     <div className="page" style={{ maxWidth: 480 }}>
+      <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
 
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

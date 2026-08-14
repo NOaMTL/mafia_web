@@ -41,6 +41,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
+      <div className="ambiance ambiance-home on" />
       <NavHeader session={session} diamonds={profile?.diamonds} />
 
       <div style={{ textAlign: 'center', marginBottom: 24 }}>

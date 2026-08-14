@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { getAvatarMap } from '@/lib/avatars';
 
 export default function LobbyWait() {
   const router  = useRouter();
@@ -12,6 +13,8 @@ export default function LobbyWait() {
   const [lobby, setLobby]     = useState(null);
   const [ready, setReady]     = useState(false);
   const [error, setError]     = useState('');
+  const [avatarMap, setAvatarMap] = useState({});
+  const [copied, setCopied]   = useState(false);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -21,6 +24,8 @@ export default function LobbyWait() {
 
     const socket = getSocket();
     socketRef.current = socket;
+
+    getAvatarMap().then(setAvatarMap);
 
     const refresh = () => api.getLobby(id).then(setLobby).catch(() => {});
 
@@ -58,14 +63,23 @@ export default function LobbyWait() {
 
   return (
     <div className="page" style={{ maxWidth: 560 }}>
+      <div className="ambiance ambiance-home on" />
       <h1 className="title-gold" style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>
         SALLE D&apos;ATTENTE
       </h1>
       <p style={{ textAlign: 'center', marginBottom: 24 }}>
         <span className="dim">Code : </span>
-        <span className="cinzel" style={{ color: 'var(--gold-hi)', fontSize: 22, letterSpacing: 6 }}>
+        <span className="cinzel"
+              title="Cliquer pour copier"
+              style={{ color: 'var(--gold-hi)', fontSize: 22, letterSpacing: 6, cursor: 'pointer' }}
+              onClick={() => {
+                navigator.clipboard?.writeText(lobby.code);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}>
           {lobby.code}
         </span>
+        {copied && <span style={{ color: 'var(--green)', fontSize: 13, marginLeft: 10 }}>✓ copié</span>}
       </p>
 
       <div className="card">
@@ -74,14 +88,23 @@ export default function LobbyWait() {
         </p>
 
         <div className="players-grid" style={{ marginBottom: 20 }}>
-          {players.map((p) => (
-            <div key={p.userId} className="player-tile">
-              <div className="name">{p.username}{p.isBot ? ' 🤖' : ''}</div>
-              <div className="sub" style={{ color: p.isReady ? '#2ecc71' : undefined }}>
-                {p.isReady ? 'Prêt' : 'En attente'}
+          {players.map((p) => {
+            const url = p.avatarId ? avatarMap[p.avatarId] : null;
+            return (
+              <div key={p.userId} className="player-tile">
+                <div className="avatar">
+                  {url
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={url} alt="" />
+                    : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
+                </div>
+                <div className="name">{p.username}</div>
+                <div className="sub" style={{ color: p.isReady ? 'var(--green)' : undefined }}>
+                  {p.isReady ? '✓ Prêt' : 'En attente'}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {error && <div className="error" style={{ marginBottom: 12 }}>{error}</div>}
