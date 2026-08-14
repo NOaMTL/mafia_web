@@ -63,7 +63,7 @@ export default function LeaderboardPage() {
             <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
                           background: 'rgba(0,0,0,.4)', display: 'flex',
                           alignItems: 'center', justifyContent: 'center',
-                          border: '1px solid rgba(255,255,255,.12)' }}>
+                          border: '1px solid rgba(255,255,255,.28)' }}>
               {url
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={url} alt="" style={{ width: '100%', height: '100%' }} />
