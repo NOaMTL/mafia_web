@@ -65,6 +65,7 @@ const NIGHT_PROMPTS = {
 
 const NIGHT_ACTION_ROLES = ['MAFIOSO', 'GODFATHER', 'SHERIFF', 'DETECTIVE', 'INVESTIGATOR', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT', 'BLACKMAILER', 'JANITOR', 'FRAMER', 'LOOKOUT', 'BODYGUARD', 'CONSORT', 'BUS_DRIVER', 'VETERAN'];
 const DAY_PHASES = ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL', 'JUDGMENT', 'SENTENCE'];
+const EVIDENCE_TYPE_LABELS = { SUSPICION: 'SOUPÇON', CLAIM: 'RÔLE REVENDIQUÉ', OBSERVATION: 'OBSERVATION' };
 
 const ROLE_NIGHT_SCENES = {
   CITIZEN:      { accent: '#9a8f7d', icon: '🏘️', set: 'alley', title: 'LA VILLE DORT', action: 'OBSERVER', copy: 'Tu n’as pas d’action nocturne. Prépare tes déductions pour le lever du jour.' },
@@ -105,6 +106,7 @@ export default function GamePage() {
   const [players, setPlayers]     = useState([]);
   const [role, setRole]           = useState(null);   // { role, team, description }
   const [votes, setVotes]         = useState({});
+  const [lastDayVotes, setLastDayVotes] = useState({});
   const [gazette, setGazette]     = useState([]);
   const [trial, setTrial]         = useState(null);
   const [judgment, setJudgment]   = useState(null);   // { votes, guilty, innocent, abstain }
@@ -156,8 +158,12 @@ export default function GamePage() {
   const lastHeartbeatSecond = useRef(null);
   const roleRef = useRef(null);
   const roundRef  = useRef(1);
+  const phaseRef = useRef('');
+  const votesRef = useRef({});
   useEffect(() => { roundRef.current = round; }, [round]);
   useEffect(() => { roleRef.current = role; }, [role]);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { votesRef.current = votes; }, [votes]);
 
   const addLog = useCallback((icon, text) => {
     setGameLog((l) => [...l, { icon, text, round: roundRef.current }]);
@@ -187,15 +193,19 @@ export default function GamePage() {
     getAvatarMap().then(setAvatarMap);
 
     const onSync = (d) => {
-      setPhase(d.phase); setRound(d.round ?? 1);
+      setPhase(d.phase); phaseRef.current = d.phase; setRound(d.round ?? 1);
       if (d.endAt)   setEndAt(d.endAt);
       if (d.startAt) setStartAt(d.startAt);
       if (d.players) setPlayers(d.players);
-      if (d.votes)   setVotes(d.votes);
+      if (d.votes)   { setVotes(d.votes); votesRef.current = d.votes; }
       if (d.evidenceBoard) setEvidence(d.evidenceBoard);
     };
     const onPhase = (d) => {
+      if (phaseRef.current === 'DAY_VOTE' && d.phase !== 'DAY_VOTE') {
+        setLastDayVotes({ ...votesRef.current });
+      }
       setPhase(d.phase);
+      phaseRef.current = d.phase;
       if (d.round) setRound(d.round);
       setEndAt(d.endAt ?? 0);
       setStartAt(d.startAt ?? 0);
@@ -219,12 +229,16 @@ export default function GamePage() {
     };
     const onPublic   = (d) => {
       if (d?.players) setPlayers(d.players);
-      if (d?.votes) setVotes(d.votes);
+      if (d?.votes) { setVotes(d.votes); votesRef.current = d.votes; }
       if (d?.evidenceBoard) setEvidence(d.evidenceBoard);
     };
     const onRole     = (d) => setRole(d);
     const onResources = (d) => setRole((current) => current ? { ...current, resources: d.resources ?? [] } : current);
-    const onVotes    = (d) => setVotes(d.tally ?? {});
+    const onVotes    = (d) => {
+      const tally = d.tally ?? {};
+      setVotes(tally);
+      votesRef.current = tally;
+    };
     const onGazette  = (d) => {
       const entries = d.entries ?? [];
       setGazette((prev) => {
@@ -678,6 +692,13 @@ export default function GamePage() {
     }, 350);
   }
 
+  function markPlayer(subjectId, suspicion) {
+    const current = notes[subjectId] ?? { text: '', suspicion: '?' };
+    updateNote(subjectId, { ...current, suspicion });
+    const player = players.find((item) => item.userId === subjectId);
+    toast(`${suspicion === 'MAFIA' ? '◆' : suspicion === 'TOWN' ? '✦' : '?'} ${player?.username ?? 'Joueur'} marqué ${suspicion === 'MAFIA' ? 'suspect' : suspicion === 'TOWN' ? 'crédible' : 'inconnu'} dans le dossier.`);
+  }
+
   function addEvidence(item) {
     send('evidence:add', item);
   }
@@ -882,18 +903,25 @@ export default function GamePage() {
             myVerdict={myVerdict}
             judgment={judgment}
             castVerdict={castVerdict}
+            chatMessages={chatMessages}
+            notes={notes}
+            evidence={evidence}
+            previousVotes={lastDayVotes}
+            onMarkPlayer={markPlayer}
             onOpenNotebook={() => setPanelOpen(true)}
             onSkip={() => send('phase:skip_vote', {})}
             skipInfo={skipInfo}
           />
-          <DossierQuickAccess
-            onOpen={() => setPanelOpen(true)}
-            notes={notes}
-            evidence={evidence}
-            players={players}
-            result={detective}
-            round={round}
-          />
+          {phase !== 'DAY_DISCUSSION' && (
+            <DossierQuickAccess
+              onOpen={() => setPanelOpen(true)}
+              notes={notes}
+              evidence={evidence}
+              players={players}
+              result={detective}
+              round={round}
+            />
+          )}
           {isSilenced && <CentralStatusEffect kind="blackmailed" icon="🤐" title="RÉDUIT AU SILENCE" detail="Chat public verrouillé · vote toujours disponible" />}
           {!isAlive && (
             <AfterlifeDock
@@ -1177,7 +1205,8 @@ function PhaseCenterStage({
   phase, round, remaining, role, players, avatarMap, sessionId, isAlive,
   nightTarget, nightSecondaryTarget, actionConfirmed, actionFeedback, canTargetPlayer, clickPlayer, onVeteranAlert, mafiaTeammateIds,
   gazetteNow, nightMsg, detective, trial, sentence, votes, myVote, myVerdict,
-  judgment, castVerdict, onOpenNotebook, onSkip, skipInfo,
+  judgment, castVerdict, chatMessages, notes, evidence, previousVotes, onMarkPlayer,
+  onOpenNotebook, onSkip, skipInfo,
 }) {
   const timer = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
   const living = players.filter((player) => player.isAlive);
@@ -1339,12 +1368,82 @@ function PhaseCenterStage({
   }
 
   if (phase === 'DAY_DISCUSSION') {
+    const dayMessages = (chatMessages ?? []).filter((message) => message.channel === 'day');
+    const latestStatements = new Map();
+    for (const message of dayMessages) latestStatements.set(message.userId, message);
+    const claims = new Map();
+    for (const item of [...(evidence ?? [])].sort((a, b) => a.createdAt - b.createdAt)) {
+      if (item.type === 'CLAIM') claims.set(item.subjectId, item);
+    }
+    const publicSignals = [...(evidence ?? [])].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
+    const previousRanking = Object.entries(previousVotes ?? {})
+      .map(([userId, voterIds]) => ({ player: players.find((item) => item.userId === userId), count: voterIds.length }))
+      .filter((entry) => entry.player && entry.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+    const suspicionWeight = (value) => value === 'MAFIA' ? 4 : value === 'TOWN' ? 0 : value && value !== '?' ? 2 : 1;
+    const analyzedPlayers = [...living].sort((a, b) =>
+      suspicionWeight(notes?.[b.userId]?.suspicion) - suspicionWeight(notes?.[a.userId]?.suspicion),
+    );
     return (
       <section className="phase-stage discussion-stage">
-        <header className="phase-stage-heading"><div><small>JOUR {round}</small><h2>LA PAROLE EST À LA VILLE</h2></div><time><small>DISCUSSION</small>{timer}</time></header>
-        <div className="discussion-emblem"><span>💬</span><h1>QUI MENT ?</h1><p>Compare les témoignages, les visites et les votes. Le chat est ouvert.</p></div>
-        <div className="discussion-cast">{living.map((player) => <span key={player.userId} className={player.userId === sessionId ? 'me' : ''}>{player.username}</span>)}</div>
-        {detective && <InvestigationResult result={detective} />}
+        <header className="phase-stage-heading"><div><small>JOUR {round} · TABLE D’ANALYSE</small><h2>RECROISE LES TÉMOIGNAGES</h2></div><time><small>DISCUSSION</small>{timer}</time></header>
+        <div className="day-analysis-board">
+          <section className="day-player-ledger">
+            <header><div><small>TES DÉDUCTIONS PRIVÉES</small><strong>JOUEURS À SURVEILLER</strong></div><span>{living.length} EN VIE</span></header>
+            <div className="day-player-grid">
+              {analyzedPlayers.map((player, index) => {
+                const note = notes?.[player.userId] ?? {};
+                const suspicion = note.suspicion ?? '?';
+                const statement = latestStatements.get(player.userId);
+                const claim = claims.get(player.userId);
+                const previousCount = previousVotes?.[player.userId]?.length ?? 0;
+                const avatarUrl = player.avatarId ? avatarMap[player.avatarId] : null;
+                const mine = player.userId === sessionId;
+                return (
+                  <article key={player.userId} className={`day-player-file suspicion-${String(suspicion).toLowerCase()} ${mine ? 'mine' : ''}`} style={{ '--file-delay': `${Math.min(index * 45, 360)}ms` }}>
+                    <div className="day-player-file-head">
+                      <span className="day-file-avatar">
+                        {avatarUrl
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={avatarUrl} alt="" />
+                          : (player.isBot ? '🤖' : player.username?.[0]?.toUpperCase())}
+                      </span>
+                      <div><strong>{player.username}</strong><small>{mine ? 'VOUS' : claim ? `REVENDIQUE · ${claim.text}` : 'AUCUN RÔLE REVENDIQUÉ'}</small></div>
+                      {previousCount > 0 && <b className="day-vote-memory" title="Votes reçus au dernier scrutin">{previousCount} 🗳</b>}
+                    </div>
+                    <blockquote>{statement ? `« ${statement.message} »` : 'Aucune prise de parole récente.'}</blockquote>
+                    {!mine ? (
+                      <div className="day-file-actions">
+                        <button className={suspicion === 'MAFIA' ? 'active suspect' : 'suspect'} aria-pressed={suspicion === 'MAFIA'} onClick={() => onMarkPlayer(player.userId, suspicion === 'MAFIA' ? '?' : 'MAFIA')}>◆ SUSPECT</button>
+                        <button className={suspicion === 'TOWN' ? 'active credible' : 'credible'} aria-pressed={suspicion === 'TOWN'} onClick={() => onMarkPlayer(player.userId, suspicion === 'TOWN' ? '?' : 'TOWN')}>✦ CRÉDIBLE</button>
+                        <button onClick={onOpenNotebook}>＋ NOTE</button>
+                      </div>
+                    ) : <div className="day-file-self">TON DOSSIER N’EST PAS ÉVALUÉ</div>}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+          <aside className="day-signal-column">
+            <section className="day-signal-card public-evidence-card">
+              <header><span>🧷</span><div><small>PLACE PUBLIQUE</small><strong>PREUVES RÉCENTES</strong></div><b>{publicSignals.length}</b></header>
+              {publicSignals.length ? publicSignals.map((item) => (
+                <article key={item.id}>
+                  <small>{EVIDENCE_TYPE_LABELS[item.type] ?? item.type} · {item.authorUsername}</small>
+                  <strong>{players.find((player) => player.userId === item.subjectId)?.username ?? 'Joueur inconnu'}</strong>
+                  <p>{item.text}</p>
+                </article>
+              )) : <p className="day-signal-empty">Aucune preuve publique. Le débat repose encore sur les paroles.</p>}
+            </section>
+            <section className="day-signal-card vote-memory-card">
+              <header><span>🗳️</span><div><small>TOUR PRÉCÉDENT</small><strong>MÉMOIRE DU SCRUTIN</strong></div></header>
+              {previousRanking.length ? previousRanking.map((entry, index) => (
+                <div key={entry.player.userId} className="day-vote-rank"><i>{index + 1}</i><span>{entry.player.username}</span><b>{entry.count} voix</b></div>
+              )) : <p className="day-signal-empty">Aucun scrutin précédent à comparer.</p>}
+            </section>
+          </aside>
+        </div>
         {footer(true)}
       </section>
     );
