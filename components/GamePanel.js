@@ -10,13 +10,14 @@ const ROLE_LABELS = {
   BLACKMAILER: 'Maître chanteur', JANITOR: 'Janitor', FRAMER: 'Framer',
   LOOKOUT: 'Guetteur', BODYGUARD: 'Garde du corps', CONSORT: 'Consort', MAYOR: 'Maire',
   BUS_DRIVER: 'Chauffeur de bus', VETERAN: 'Vétéran', SPY: 'Espion',
+  MEDIUM: 'Médium',
 };
 
 const SUSPICIONS = ['?', 'TOWN', 'MAFIA', ...ROLE_GUIDE.map((role) => role.key)];
 const EVIDENCE_LABELS = { SUSPICION: 'Soupçon', CLAIM: 'Rôle revendiqué', OBSERVATION: 'Observation' };
 
 /**
- * DOSSIER DE PARTIE — fullscreen drawer, 4 tabs (parity with Flutter):
+ * DOSSIER D’ENQUÊTE — source unique pour les notes, preuves et archives :
  *   Joueurs   — list + personal notes + role suspicion per player
  *   Testament — death note editor
  *   Journal   — chronological game log
@@ -39,8 +40,8 @@ export default function GamePanel({
         {/* ── Header ── */}
         <div className="panel-header">
           <div>
-            <div className="dossier-kicker">BUREAU DES INVESTIGATIONS</div>
-            <div className="dossier-title">📖 CARNET D’ENQUÊTE</div>
+            <div className="dossier-kicker">BUREAU DES INVESTIGATIONS · DOSSIER UNIQUE</div>
+            <div className="dossier-title">📖 DOSSIER D’ENQUÊTE</div>
             <div className="dossier-meta">
               Tour {round} · {alive} joueurs en vie
             </div>
@@ -67,7 +68,7 @@ export default function GamePanel({
 
         {/* ── Bottom nav ── */}
         <div className="panel-nav">
-          {['🕵️ CARNET', '🧷 PREUVES', '📜 TESTAMENT', '🧾 JOURNAL', '📖 RÔLES'].map((label, i) => (
+          {['🕵️ JOUEURS', '🧷 PREUVES', '📜 TESTAMENT', '🧾 CHRONOLOGIE', '📖 RÔLES'].map((label, i) => (
             <button key={i}
                     className={tab === i ? 'active' : ''}
                     onClick={() => setTab(i)}>
@@ -92,6 +93,9 @@ function PlayersTab({ players, myId, notes, onUpdateNote }) {
       <div className="dossier-player-grid">
       {players.filter((p) => p.userId !== myId).map((p, index) => {
         const n = notes[p.userId] ?? {};
+        const noteLines = String(n.text ?? '').split('\n').filter(Boolean);
+        const automaticLines = noteLines.filter((line) => /^(Nuit|Jour) \d+ ·/.test(line));
+        const manualText = noteLines.filter((line) => !/^(Nuit|Jour) \d+ ·/.test(line)).join('\n');
         return (
           <article key={p.userId} className={`dossier-player ${p.isAlive ? '' : 'dead'} suspicion-${String(n.suspicion ?? 'unknown').toLowerCase()}`}>
             <div className="dossier-player-head">
@@ -115,10 +119,20 @@ function PlayersTab({ players, myId, notes, onUpdateNote }) {
               <button className={n.suspicion === 'TOWN' ? 'active town' : 'town'} onClick={() => update(p.userId, { suspicion: 'TOWN' })}>TOWN</button>
               <button className={n.suspicion === 'MAFIA' ? 'active mafia' : 'mafia'} onClick={() => update(p.userId, { suspicion: 'MAFIA' })}>MAFIA</button>
             </div>}
+            {automaticLines.length > 0 && (
+              <div className="dossier-auto-log">
+                <header><span>CHRONOLOGIE AUTOMATIQUE</span><b>{automaticLines.length}</b></header>
+                {automaticLines.slice(-6).reverse().map((line, lineIndex) => {
+                  const [when, detail] = line.split(' · ');
+                  return <div key={`${line}-${lineIndex}`}><small>{when}</small><p>{detail ?? line}</p></div>;
+                })}
+              </div>
+            )}
             <textarea className="dossier-note"
-                   placeholder="Consigne ici ses votes, contradictions, visites ou revendications…"
-                   value={n.text ?? ''}
-                   onChange={(e) => update(p.userId, { text: e.target.value })} />
+                   maxLength={2000}
+                   placeholder="Ajoute tes déductions, contradictions et revendications…"
+                   value={manualText}
+                   onChange={(e) => update(p.userId, { text: [...automaticLines, e.target.value].filter(Boolean).join('\n') })} />
           </article>
         );
       })}

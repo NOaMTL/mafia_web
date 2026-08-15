@@ -18,6 +18,7 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
   const [text, setText] = useState('');
   const bottomRef       = useRef(null);
   const mafiaWasAvailable = useRef(false);
+  const deadWasAvailable = useRef(false);
 
   const tabs = [...available, 'sys'];
 
@@ -30,6 +31,12 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
     const mafiaAvailable = available.includes('mafia');
     if (mafiaAvailable && !mafiaWasAvailable.current) setTab('mafia');
     mafiaWasAvailable.current = mafiaAvailable;
+  }, [available]);
+
+  useEffect(() => {
+    const deadAvailable = available.includes('dead');
+    if (deadAvailable && !deadWasAvailable.current) setTab('dead');
+    deadWasAvailable.current = deadAvailable;
   }, [available]);
 
   const visible = tab === 'sys' ? [] : messages.filter((m) => m.channel === tab);
@@ -51,7 +58,11 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
       <div className="chat-header">
         <span>CHAT</span>
         <small className={tab === 'mafia' ? 'private-channel' : ''}>
-          {tab === 'mafia' ? 'CANAL MAFIA · PRIVÉ' : canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}
+          {tab === 'mafia'
+            ? 'CANAL MAFIA · PRIVÉ'
+            : tab === 'dead'
+              ? 'MONDE DES MORTS · SÉANCE'
+              : canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}
         </small>
       </div>
       <div className="chat-tabs">
