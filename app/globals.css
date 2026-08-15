@@ -3755,3 +3755,638 @@ html[data-theme="light"] .toast {
   .lobby-role-preview { align-items: flex-start; flex-direction: column; }
   .lobby-role-preview section { justify-content: flex-start; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CINEMATIC GAME PASS — investigation dossier, live intel & town vote
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Full investigation desk. The notebook now feels like a separate place in
+   the game instead of a narrow settings drawer. */
+.dossier-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(123,85,39,.15), transparent 42%),
+    rgba(0,0,0,.84);
+  backdrop-filter: blur(11px) saturate(.7);
+}
+.investigation-dossier {
+  position: relative;
+  display: grid;
+  grid-template-columns: 188px minmax(0, 1fr);
+  grid-template-rows: 94px minmax(0, 1fr);
+  width: min(1140px, 96vw);
+  height: min(820px, 92svh);
+  overflow: hidden;
+  border: 1px solid rgba(207,159,80,.42);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(139,90,35,.055) 1px, transparent 1px) 0 0/44px 44px,
+    linear-gradient(rgba(139,90,35,.04) 1px, transparent 1px) 0 0/44px 44px,
+    radial-gradient(circle at 72% 0, rgba(120,75,29,.13), transparent 38%),
+    linear-gradient(145deg, #111210, #080a0b 58%, #050607);
+  box-shadow: 0 45px 130px rgba(0,0,0,.82), inset 0 0 90px rgba(0,0,0,.48);
+  animation: dossier-open .48s cubic-bezier(.16,.84,.24,1) both;
+}
+.investigation-dossier::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 0 68%, rgba(204,154,72,.035) 68% 68.3%, transparent 68.3%);
+}
+.investigation-dossier .panel-header {
+  position: relative;
+  z-index: 2;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: 94px;
+  padding: 15px 25px 14px 28px;
+  border-bottom: 1px solid rgba(211,163,84,.3);
+  background: linear-gradient(90deg, rgba(159,104,39,.14), rgba(3,5,6,.2) 45%, rgba(0,0,0,.35));
+}
+.dossier-kicker {
+  margin-bottom: 4px;
+  color: #ad7b3c;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 2.6px;
+}
+.dossier-title {
+  color: #eee7db;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(27px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.dossier-meta {
+  margin-top: 6px;
+  color: rgba(255,255,255,.38);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+.dossier-close {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  border-color: rgba(210,161,80,.27);
+  padding: 0 8px 0 14px;
+  color: rgba(255,255,255,.5);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.1px;
+}
+.dossier-close b {
+  display: grid;
+  width: 24px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 50%;
+  color: #d3a052;
+  font-size: 10px;
+}
+.investigation-dossier .panel-nav {
+  position: relative;
+  z-index: 2;
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-right: 1px solid rgba(211,163,84,.18);
+  background: linear-gradient(180deg, rgba(3,5,6,.62), rgba(0,0,0,.48));
+}
+.investigation-dossier .panel-nav button {
+  position: relative;
+  flex: none;
+  min-height: 67px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.055);
+  padding: 0 17px 0 22px;
+  color: rgba(255,255,255,.43);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .9px;
+  text-align: left;
+}
+.investigation-dossier .panel-nav button::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  right: -1px;
+  bottom: 18%;
+  width: 2px;
+  background: #d1a050;
+  opacity: 0;
+  box-shadow: 0 0 13px rgba(209,160,80,.6);
+}
+.investigation-dossier .panel-nav button:hover,
+.investigation-dossier .panel-nav button.active {
+  background: linear-gradient(90deg, rgba(191,139,61,.13), transparent);
+  color: #e2bd7d;
+}
+.investigation-dossier .panel-nav button.active::after { opacity: 1; }
+.investigation-dossier .panel-body {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  padding: 24px 25px 30px;
+  overflow: auto;
+  font-size: 14px;
+  scrollbar-color: rgba(194,143,67,.42) transparent;
+}
+.dossier-player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.dossier-player {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.095);
+  border-left: 3px solid rgba(191,147,75,.5);
+  padding: 14px;
+  background:
+    linear-gradient(135deg, rgba(171,116,46,.055), transparent 42%),
+    rgba(3,5,6,.72);
+  box-shadow: 0 12px 28px rgba(0,0,0,.22);
+  transition: border-color .22s ease, background .22s ease, transform .22s ease;
+}
+.dossier-player:hover { transform: translateY(-2px); border-color: rgba(210,164,89,.28); }
+.dossier-player.suspicion-town { border-left-color: #5291b9; background: linear-gradient(135deg, rgba(50,108,149,.1), transparent 47%), rgba(3,5,6,.72); }
+.dossier-player.suspicion-mafia { border-left-color: #b63f36; background: linear-gradient(135deg, rgba(145,35,29,.14), transparent 47%), rgba(3,5,6,.72); }
+.dossier-player.dead { filter: saturate(.45); opacity: .66; }
+.dossier-player-head {
+  display: grid;
+  grid-template-columns: 37px minmax(0, 1fr) minmax(104px, auto);
+  align-items: center;
+  gap: 10px;
+}
+.dossier-player-number {
+  color: rgba(208,159,78,.34);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+.dossier-player-head strong {
+  display: block;
+  overflow: hidden;
+  color: #eee9e0;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dossier-player-head small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,.3);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.dossier-player-head select {
+  min-width: 0;
+  height: 34px;
+  border-radius: 2px;
+  padding: 0 8px;
+  background: rgba(0,0,0,.54);
+  color: #d5b171;
+  font-size: 10px;
+  font-weight: 800;
+}
+.dossier-dead-role { color: #a94840; font-size: 9px; font-weight: 900; text-align: right; }
+.quick-suspicion { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 12px 0 8px; }
+.quick-suspicion button {
+  min-height: 30px;
+  border-radius: 2px;
+  padding: 0 5px;
+  color: rgba(255,255,255,.35);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .7px;
+}
+.quick-suspicion button.active { border-color: #aa8246; background: rgba(170,130,70,.12); color: #d8b276; }
+.quick-suspicion button.town.active { border-color: #4f91bb; background: rgba(51,116,161,.15); color: #71b1dd; }
+.quick-suspicion button.mafia.active { border-color: #b64037; background: rgba(155,40,33,.17); color: #de655b; }
+.dossier-note {
+  width: 100%;
+  min-height: 82px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 2px;
+  padding: 10px 11px;
+  resize: vertical;
+  background:
+    repeating-linear-gradient(transparent 0 22px, rgba(190,146,75,.075) 22px 23px),
+    rgba(0,0,0,.26);
+  color: rgba(255,255,255,.74);
+  font-family: 'Crimson Text', serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.dossier-note:focus { border-color: rgba(205,156,76,.38); box-shadow: 0 0 0 2px rgba(205,156,76,.06); }
+
+/* Compact live intelligence layer over the central game scene. */
+.investigation-hud,
+.intel-hud-collapsed {
+  position: absolute;
+  right: 13px;
+  bottom: 66px;
+  z-index: 32;
+}
+.investigation-hud {
+  display: flex;
+  width: min(326px, 42%);
+  max-height: min(390px, calc(100% - 145px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(199,151,74,.36);
+  border-radius: 4px;
+  background:
+    linear-gradient(145deg, rgba(125,77,29,.11), transparent 40%),
+    rgba(4,7,8,.94);
+  box-shadow: 0 18px 50px rgba(0,0,0,.65), inset 0 0 35px rgba(0,0,0,.28);
+  backdrop-filter: blur(13px);
+  animation: intel-slide .34s cubic-bezier(.16,.84,.24,1) both;
+}
+.investigation-hud > header {
+  display: flex;
+  min-height: 53px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 9px 8px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+  background: linear-gradient(90deg, rgba(189,138,60,.1), transparent);
+}
+.investigation-hud > header small { display: block; color: #a7783b; font-size: 7px; font-weight: 900; letter-spacing: 1.5px; }
+.investigation-hud > header strong { color: #e7ddce; font-family: 'Barlow Condensed', sans-serif; font-size: 19px; letter-spacing: .8px; }
+.investigation-hud > header button {
+  display: grid;
+  width: 31px;
+  aspect-ratio: 1;
+  min-height: 0;
+  place-items: center;
+  border-radius: 50%;
+  padding: 0;
+  color: #bc8e49;
+  font-size: 17px;
+}
+.intel-hud-content { min-height: 0; overflow-y: auto; padding: 8px; }
+.investigation-hud .investigation-result { width: 100%; margin: 0 0 7px; padding: 9px 10px; }
+.investigation-hud .investigation-result b { font-size: 10px; line-height: 1.4; }
+.intel-line {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 5px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-left: 2px solid rgba(194,147,73,.5);
+  padding: 8px 9px;
+  background: rgba(255,255,255,.018);
+}
+.intel-line > span { color: #c99a4d; font-size: 13px; text-align: center; }
+.intel-line b { display: block; color: #e8e3da; font-size: 10px; }
+.intel-line p { overflow: hidden; margin-top: 2px; color: rgba(255,255,255,.48); font-size: 9px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.intel-line.intel-mafia { border-left-color: #b43f36; }
+.intel-line.intel-mafia > span { color: #d45147; }
+.intel-line.intel-town { border-left-color: #4487b3; }
+.intel-line.intel-town > span { color: #60a7d5; }
+.intel-line.public { border-left-color: #b68b45; }
+.intel-empty { padding: 18px 13px; color: rgba(255,255,255,.37); font-family: 'Crimson Text', serif; font-size: 13px; font-style: italic; line-height: 1.5; text-align: center; }
+.intel-open-dossier {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,.075);
+  border-radius: 0;
+  padding: 0 13px;
+  background: rgba(176,126,50,.075);
+  color: #c99a50;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: none;
+}
+.intel-open-dossier span { font-size: 16px; }
+.intel-hud-collapsed {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 9px;
+  border-color: rgba(201,154,75,.38);
+  border-radius: 22px 3px 3px 22px;
+  padding: 0 9px 0 7px;
+  background: rgba(4,7,8,.94);
+  color: #d1a55f;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .8px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.52);
+}
+.intel-hud-collapsed > span { display: grid; width: 29px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: rgba(191,139,60,.12); font-size: 14px; }
+.intel-hud-collapsed b { display: grid; min-width: 21px; height: 21px; place-items: center; border-radius: 50%; background: #9d6e32; color: #090807; font-size: 9px; }
+
+/* The vote becomes a noisy public square: suspect posters, crowd silhouettes
+   and a physical ballot booth replace the dashboard-like rows. */
+.vote-stage {
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 15%, rgba(226,168,79,.19), transparent 42%),
+    linear-gradient(rgba(23,12,6,.45), rgba(4,4,5,.94)),
+    url('/bg/jour.webp') center/cover;
+}
+.vote-stage::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(102deg, transparent 0 76px, rgba(255,194,97,.018) 78px 79px, transparent 81px 154px);
+  mix-blend-mode: screen;
+}
+.vote-stage .phase-stage-heading,
+.vote-stage-layout { position: relative; z-index: 3; }
+.vote-stage .phase-stage-heading {
+  border-bottom-color: rgba(209,155,73,.26);
+  background: linear-gradient(90deg, rgba(24,12,6,.94), rgba(4,5,6,.82));
+}
+.vote-crowd {
+  position: absolute;
+  z-index: 1;
+  right: -3%;
+  bottom: 42px;
+  left: -3%;
+  display: flex;
+  height: 31%;
+  align-items: flex-end;
+  justify-content: space-around;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .44;
+  filter: drop-shadow(0 -6px 22px rgba(0,0,0,.62));
+}
+.vote-crowd i {
+  display: block;
+  width: clamp(72px, 12vw, 145px);
+  height: 68%;
+  border-radius: 48% 48% 9% 9%;
+  background: linear-gradient(#080707, #020303);
+  transform-origin: 50% 100%;
+  animation: crowd-sway 4.4s ease-in-out infinite alternate;
+}
+.vote-crowd i::before {
+  content: '';
+  display: block;
+  width: 44%;
+  aspect-ratio: 1;
+  margin: -22% auto 0;
+  border-radius: 50%;
+  background: #070606;
+}
+.vote-crowd i:nth-child(2n) { height: 57%; animation-delay: -1.2s; }
+.vote-crowd i:nth-child(3n) { height: 79%; animation-delay: -2.4s; }
+.vote-stage-layout {
+  grid-template-columns: minmax(390px, 1.45fr) minmax(230px, .55fr);
+  gap: clamp(14px, 2vw, 24px);
+  width: min(1020px, calc(100% - 38px));
+  padding: 15px 0 25px;
+}
+.vote-stage .vote-candidates {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 10px;
+  max-height: min(500px, calc(100svh - 210px));
+  border: 0;
+  padding: 8px;
+  background: transparent;
+}
+.vote-stage .phase-player-option.mode-vote {
+  position: relative;
+  display: flex;
+  min-height: 166px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(187,145,83,.42);
+  border-radius: 2px;
+  padding: 19px 9px 14px;
+  background:
+    linear-gradient(rgba(35,25,16,.9), rgba(12,10,8,.96)),
+    repeating-linear-gradient(-12deg, transparent 0 10px, rgba(190,147,82,.07) 11px 12px);
+  color: #e8dcc8;
+  text-align: center;
+  box-shadow: 0 15px 31px rgba(0,0,0,.32), inset 0 0 28px rgba(143,88,28,.08);
+  transform: rotate(var(--poster-turn, 0deg));
+  transform-origin: 50% 8%;
+}
+.vote-stage .phase-player-option.mode-vote:nth-child(3n+1) { --poster-turn: -.65deg; }
+.vote-stage .phase-player-option.mode-vote:nth-child(3n+2) { --poster-turn: .55deg; }
+.vote-stage .phase-player-option.mode-vote::before {
+  content: 'SUSPECT';
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  color: rgba(223,181,112,.35);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.8px;
+}
+.vote-stage .phase-player-option.mode-vote:hover:not(:disabled) {
+  border-color: #dda958;
+  background: linear-gradient(rgba(66,39,18,.94), rgba(17,12,8,.98));
+  box-shadow: 0 21px 42px rgba(0,0,0,.47), 0 0 25px rgba(214,158,75,.1);
+  transform: rotate(0) translateY(-5px) scale(1.015);
+}
+.vote-stage .phase-player-option.mode-vote.selected {
+  border-color: #b94a3e;
+  background:
+    radial-gradient(circle at 85% 14%, rgba(183,57,48,.22), transparent 31%),
+    linear-gradient(rgba(67,27,20,.92), rgba(16,9,8,.98));
+  box-shadow: 0 22px 48px rgba(0,0,0,.52), inset 0 0 0 2px rgba(154,48,41,.19);
+  animation: ballot-drop .38s cubic-bezier(.16,.84,.24,1) both;
+}
+.vote-stage .phase-player-option.mode-vote.selected::after {
+  content: 'ACCUSÉ';
+  position: absolute;
+  right: -21px;
+  bottom: 16px;
+  width: 88px;
+  border: 2px solid rgba(196,66,55,.7);
+  padding: 3px 0;
+  color: rgba(223,78,66,.82);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  transform: rotate(-38deg);
+}
+.vote-stage .mode-vote .phase-player-avatar {
+  width: 58px;
+  border: 2px solid rgba(216,170,96,.46);
+  background: #0b0907;
+  box-shadow: 0 0 0 5px rgba(132,83,32,.13);
+  font-size: 22px;
+}
+.vote-stage .mode-vote > span:nth-child(2) { width: 100%; }
+.vote-stage .mode-vote b { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; letter-spacing: .5px; }
+.vote-stage .mode-vote small { color: rgba(224,189,132,.42); font-size: 7px; font-weight: 900; letter-spacing: 1.2px; }
+.vote-stage .mode-vote i {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  min-width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid rgba(217,164,83,.35);
+  border-radius: 50%;
+  background: rgba(0,0,0,.48);
+  color: #e0ae5d;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+}
+.vote-stage-layout .ballot-booth {
+  position: relative;
+  min-height: 350px;
+  overflow: hidden;
+  border: 1px solid rgba(210,159,80,.39);
+  border-top: 4px solid #9b6b31;
+  border-radius: 3px;
+  padding: 27px 20px 22px;
+  background:
+    linear-gradient(90deg, rgba(103,58,19,.15) 1px, transparent 1px) 0 0/13px 100%,
+    linear-gradient(155deg, rgba(64,35,15,.94), rgba(8,7,6,.97) 54%);
+  box-shadow: 0 25px 58px rgba(0,0,0,.54), inset 0 0 45px rgba(0,0,0,.42);
+}
+.ballot-booth::before,
+.ballot-booth::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: linear-gradient(90deg, #1d1007, #67401d 48%, #1c0f07);
+  box-shadow: 0 0 16px rgba(0,0,0,.65);
+}
+.ballot-booth::before { left: 0; }
+.ballot-booth::after { right: 0; }
+.ballot-booth > small { color: #c08c44; font-size: 8px; font-weight: 900; letter-spacing: 2px; }
+.vote-box-icon { filter: drop-shadow(0 8px 13px rgba(0,0,0,.55)); animation: ballot-float 3.2s ease-in-out infinite; }
+.vote-stage-layout .ballot-booth h3 { color: #edd099; font-size: clamp(27px, 2.7vw, 36px); line-height: .92; }
+.vote-stage-layout .ballot-booth > p { color: rgba(255,255,255,.5); font-size: 11px; line-height: 1.6; }
+.ballot-status {
+  position: relative;
+  margin-top: 18px;
+  border: 1px dashed rgba(212,164,88,.43);
+  padding: 13px 10px;
+  background: rgba(0,0,0,.28);
+}
+.ballot-status span { display: block; color: rgba(255,255,255,.3); font-size: 7px; font-weight: 900; letter-spacing: 1.6px; }
+.ballot-status strong { display: block; margin-top: 4px; color: #d35b4f; font-family: 'Barlow Condensed', sans-serif; font-size: 25px; text-transform: uppercase; }
+
+/* Tactile controls across the game. */
+.game-shell button {
+  transition: border-color .18s ease, background .18s ease, color .18s ease, filter .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.game-shell button:hover:not(:disabled) { filter: brightness(1.1); }
+.game-shell button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.game-shell button:focus-visible { outline: 2px solid #ddb15f; outline-offset: 2px; }
+.night-confirm-state.confirmed { animation: action-confirm .43s cubic-bezier(.16,.84,.24,1) both; }
+
+@keyframes dossier-open {
+  from { opacity: 0; transform: perspective(1000px) rotateX(2.5deg) translateY(22px) scale(.975); }
+  to { opacity: 1; transform: perspective(1000px) rotateX(0) translateY(0) scale(1); }
+}
+@keyframes intel-slide {
+  from { opacity: 0; transform: translateX(28px) scale(.96); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes crowd-sway {
+  from { transform: rotate(-1.4deg) translateX(-3px); }
+  to { transform: rotate(1.8deg) translateX(4px); }
+}
+@keyframes ballot-drop {
+  0% { transform: translateY(-9px) rotate(-1.5deg) scale(1.04); filter: brightness(1.4); }
+  100% { transform: translateY(0) rotate(0) scale(1); filter: brightness(1); }
+}
+@keyframes ballot-float {
+  0%,100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+}
+@keyframes action-confirm {
+  0% { transform: scale(.96); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@media (max-width: 900px) {
+  .investigation-dossier { grid-template-columns: 155px minmax(0, 1fr); }
+  .investigation-dossier .panel-nav button { padding-left: 14px; font-size: 9px; }
+  .dossier-player-grid { grid-template-columns: 1fr; }
+  .vote-stage-layout { grid-template-columns: minmax(360px, 1fr) 220px; }
+  .vote-stage .vote-candidates { grid-template-columns: repeat(2, minmax(118px, 1fr)); }
+  .investigation-hud { width: min(300px, 48%); }
+}
+@media (max-width: 760px) {
+  .dossier-overlay { align-items: stretch; padding: 8px; }
+  .investigation-dossier {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 82px minmax(0, 1fr) 58px;
+    width: 100%;
+    height: calc(100svh - 16px);
+  }
+  .investigation-dossier .panel-header { grid-column: 1; grid-row: 1; min-height: 82px; padding: 11px 13px; }
+  .dossier-title { font-size: 25px; }
+  .dossier-meta { font-size: 8px; }
+  .dossier-close { gap: 5px; padding-left: 8px; font-size: 0; }
+  .investigation-dossier .panel-body { grid-column: 1; grid-row: 2; padding: 13px 12px 18px; }
+  .investigation-dossier .panel-nav {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: row;
+    border-top: 1px solid rgba(211,163,84,.18);
+    border-right: 0;
+  }
+  .investigation-dossier .panel-nav button { min-height: 58px; padding: 0; font-size: 0; text-align: center; }
+  .investigation-dossier .panel-nav button::first-letter { font-size: 18px; }
+  .investigation-dossier .panel-nav button::after { top: auto; right: 24%; bottom: 0; left: 24%; width: auto; height: 2px; }
+  .dossier-player-head { grid-template-columns: 31px minmax(0, 1fr) 100px; }
+  .dossier-player-number { font-size: 23px; }
+  .investigation-hud { right: 8px; bottom: 61px; width: min(285px, calc(100% - 16px)); max-height: 250px; }
+  .intel-hud-collapsed { right: 8px; bottom: 61px; }
+  .vote-stage-layout { display: flex; width: calc(100% - 12px); padding-top: 7px; }
+  .vote-stage .vote-candidates { flex: none; grid-template-columns: repeat(2, minmax(110px, 1fr)); max-height: 360px; }
+  .vote-stage .phase-player-option.mode-vote { min-height: 135px; padding-block: 15px 10px; }
+  .vote-stage .mode-vote .phase-player-avatar { width: 45px; }
+  .vote-stage-layout .ballot-booth { min-height: 235px; padding: 18px; }
+  .vote-crowd { bottom: 35px; opacity: .25; }
+}
+@media (max-width: 430px) {
+  .dossier-player-head { grid-template-columns: 28px minmax(0, 1fr); }
+  .dossier-player-head select,
+  .dossier-dead-role { grid-column: 2; text-align: left; }
+  .vote-stage .vote-candidates { grid-template-columns: repeat(2, minmax(102px, 1fr)); }
+  .investigation-hud { max-height: 220px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .investigation-dossier,
+  .investigation-hud,
+  .vote-crowd i,
+  .vote-box-icon,
+  .night-confirm-state.confirmed,
+  .vote-stage .phase-player-option.mode-vote.selected { animation: none !important; }
+}

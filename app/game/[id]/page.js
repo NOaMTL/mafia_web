@@ -60,7 +60,7 @@ const NIGHT_PROMPTS = {
   CONSORT:     'Choisissez un joueur dont vous bloquerez l’action.',
 };
 
-const NIGHT_ACTION_ROLES = ['MAFIOSO', 'GODFATHER', 'SHERIFF', 'DETECTIVE', 'INVESTIGATOR', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT', 'BLACKMAILER', 'JANITOR', 'FRAMER', 'LOOKOUT', 'BODYGUARD', 'CONSORT'];
+const NIGHT_ACTION_ROLES = ['MAFIOSO', 'GODFATHER', 'SHERIFF', 'DETECTIVE', 'INVESTIGATOR', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT', 'BLACKMAILER', 'JANITOR', 'FRAMER', 'LOOKOUT', 'BODYGUARD', 'CONSORT', 'BUS_DRIVER', 'VETERAN'];
 const DAY_PHASES = ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL', 'JUDGMENT', 'SENTENCE'];
 
 const ROLE_NIGHT_SCENES = {
@@ -109,6 +109,7 @@ export default function GamePage() {
   const [winner, setWinner]       = useState(null);
   const [rewards, setRewards]     = useState(null);   // { diamondsEarned, newAchievements }
   const [nightTarget, setNightTarget]     = useState(null);
+  const [nightSecondaryTarget, setNightSecondaryTarget] = useState(null);
   const [actionConfirmed, setActionConfirmed] = useState(false);
   const [myVote, setMyVote]       = useState(null);
   const [detective, setDetective] = useState(null);
@@ -119,6 +120,7 @@ export default function GamePage() {
   const [toasts, setToasts]       = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [intelOpen, setIntelOpen] = useState(true);
   const [notes, setNotes]         = useState({});     // userId → { text, suspicion }
   const [evidence, setEvidence]   = useState([]);
   const [blackmailedRound, setBlackmailedRound] = useState(null);
@@ -169,7 +171,7 @@ export default function GamePage() {
       setStartAt(d.startAt ?? 0);
       setSkipInfo(null);
       if (d.phase === 'NIGHT') {
-        setNightTarget(null); setActionConfirmed(false);
+        setNightTarget(null); setNightSecondaryTarget(null); setActionConfirmed(false);
         setDetective(null); setNightMsg('');
         addLog('🌙', `Début de la nuit ${d.round ?? ''}`);
         sounds.night();
@@ -220,6 +222,11 @@ export default function GamePage() {
     const onTracker  = (d) => setDetective({ ...d, kind: 'visit' });
     const onLookout  = (d) => setDetective({ ...d, kind: 'watch' });
     const onInvestigator = (d) => setDetective({ ...d, kind: 'crimes' });
+    const onSpy = (d) => setDetective({ ...d, kind: 'spy' });
+    const onBusDriver = (d) => toast(`🚌 ${d.firstUsername} et ${d.secondUsername} ont échangé de destination.`);
+    const onVeteran = (d) => toast((d.visitorUsernames ?? []).length
+      ? `🎖️ Alerte : ${(d.visitorUsernames ?? []).join(', ')} vous a rendu visite.`
+      : '🎖️ Alerte : personne ne vous a rendu visite.');
     const onActionOk = (d) => setActionConfirmed(Boolean(d?.ok));
     const onSkip     = (d) => setSkipInfo(d);
     const onChat     = (m) => {
@@ -267,6 +274,9 @@ export default function GamePage() {
     socket.on('night:tracker_result',      onTracker);
     socket.on('night:lookout_result',      onLookout);
     socket.on('night:investigator_result', onInvestigator);
+    socket.on('night:spy_result',           onSpy);
+    socket.on('night:bus_driver_result',    onBusDriver);
+    socket.on('night:veteran_result',       onVeteran);
     socket.on('night:action_received',    onActionOk);
     socket.on('night:result',             onNightRes);
     socket.on('night:you_were_saved',     onSaved);
@@ -296,7 +306,7 @@ export default function GamePage() {
       ['game:sync', 'phase:start', 'game:public_state', 'game:role_assigned',
        'vote:update', 'gazette:published', 'trial:started', 'judgment:voted',
        'sentence:executed', 'sentence:acquitted', 'game:over', 'game:rewards',
-       'night:detective_result', 'night:consigliere_result', 'night:tracker_result', 'night:lookout_result', 'night:investigator_result', 'night:action_received', 'night:result',
+       'night:detective_result', 'night:consigliere_result', 'night:tracker_result', 'night:lookout_result', 'night:investigator_result', 'night:spy_result', 'night:bus_driver_result', 'night:veteran_result', 'night:action_received', 'night:result',
        'night:you_were_saved', 'night:doctor_saved', 'phase:skip_votes_updated',
        'night:blackmailed', 'night:bodyguard_saved', 'night:bodyguard_sacrifice', 'chat:blocked', 'notebook:sync', 'evidence:updated',
        'game:player_disconnected', 'game:player_reconnected', 'chat:message',
@@ -351,6 +361,7 @@ export default function GamePage() {
     if (!p.isAlive) return false;
     if (phase === 'DAY_VOTE') return isAlive && p.userId !== session?.userId;
     if (!canActAtNight) return false;
+    if (role?.role === 'VETERAN') return p.userId === session?.userId;
     if (role?.role === 'DOCTOR') return true;
     if (p.userId === session?.userId) return false;
     if (role?.team === 'MAFIA' && mafiaTeammateIds.has(p.userId)) return false;
@@ -360,6 +371,22 @@ export default function GamePage() {
   function clickPlayer(p) {
     if (!canTargetPlayer(p)) return;
     if (canActAtNight) {
+      if (role?.role === 'BUS_DRIVER') {
+        if (!nightTarget || nightSecondaryTarget) {
+          setNightTarget(p.userId);
+          setNightSecondaryTarget(null);
+          setActionConfirmed(false);
+          return;
+        }
+        if (nightTarget === p.userId) {
+          setNightTarget(null);
+          return;
+        }
+        setNightSecondaryTarget(p.userId);
+        setActionConfirmed(false);
+        send('night:action', { targetId: nightTarget, secondaryTargetId: p.userId });
+        return;
+      }
       setNightTarget(p.userId);
       setActionConfirmed(false);
       send('night:action', { targetId: p.userId });
@@ -671,6 +698,7 @@ export default function GamePage() {
             sessionId={session.userId}
             isAlive={isAlive}
             nightTarget={nightTarget}
+            nightSecondaryTarget={nightSecondaryTarget}
             actionConfirmed={actionConfirmed}
             canTargetPlayer={canTargetPlayer}
             clickPlayer={clickPlayer}
@@ -688,6 +716,16 @@ export default function GamePage() {
             onOpenNotebook={() => setPanelOpen(true)}
             onSkip={() => send('phase:skip_vote', {})}
             skipInfo={skipInfo}
+          />
+          <InvestigationHud
+            open={intelOpen}
+            onToggle={() => setIntelOpen((value) => !value)}
+            onOpenDossier={() => setPanelOpen(true)}
+            notes={notes}
+            evidence={evidence}
+            players={players}
+            result={detective}
+            round={round}
           />
           <div className="table-oval" />
 
@@ -953,7 +991,7 @@ export default function GamePage() {
 
 function PhaseCenterStage({
   phase, round, remaining, role, players, avatarMap, sessionId, isAlive,
-  nightTarget, actionConfirmed, canTargetPlayer, clickPlayer, mafiaTeammateIds,
+  nightTarget, nightSecondaryTarget, actionConfirmed, canTargetPlayer, clickPlayer, mafiaTeammateIds,
   gazetteNow, nightMsg, detective, trial, sentence, votes, myVote, myVerdict,
   judgment, castVerdict, onOpenNotebook, onSkip, skipInfo,
 }) {
@@ -961,16 +999,22 @@ function PhaseCenterStage({
   const living = players.filter((player) => player.isAlive);
 
   const playerOption = (player, mode = 'night') => {
-    const selected = mode === 'night' ? nightTarget === player.userId : myVote === player.userId;
+    const selected = mode === 'night'
+      ? nightTarget === player.userId || nightSecondaryTarget === player.userId
+      : myVote === player.userId;
+    const selectionOrder = mode === 'night'
+      ? nightTarget === player.userId ? 1 : nightSecondaryTarget === player.userId ? 2 : null
+      : null;
     const enabled = mode === 'night'
       ? canTargetPlayer(player)
       : isAlive && player.userId !== sessionId;
     const avatarUrl = player.avatarId ? avatarMap[player.avatarId] : null;
     const teammate = mafiaTeammateIds.has(player.userId);
+    const voteCount = mode === 'vote' ? (votes[player.userId] ?? []).length : 0;
     return (
       <button
         key={player.userId}
-        className={`phase-player-option ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''}`}
+        className={`phase-player-option mode-${mode} ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''}`}
         disabled={!enabled}
         onClick={() => enabled && clickPlayer(player)}
       >
@@ -980,8 +1024,8 @@ function PhaseCenterStage({
             ? <img src={avatarUrl} alt="" />
             : (player.isBot ? '🤖' : player.username?.[0]?.toUpperCase())}
         </span>
-        <span><b>{player.username}</b><small>{player.userId === sessionId ? 'VOUS' : teammate ? 'ALLIÉ MAFIA' : 'VIVANT'}</small></span>
-        <i>{selected ? '✓' : '›'}</i>
+        <span><b>{player.username}</b><small>{player.userId === sessionId ? 'VOUS' : teammate ? 'ALLIÉ MAFIA' : mode === 'vote' ? 'ACCUSER' : 'VIVANT'}</small></span>
+        <i>{mode === 'vote' && voteCount ? voteCount : selectionOrder ?? (selected ? '✓' : '›')}</i>
       </button>
     );
   };
@@ -1025,11 +1069,13 @@ function PhaseCenterStage({
               <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>ACTION EN COURS</small><h3>LA NUIT S’ACHÈVE</h3><p>Les actions sont en train d’être résolues.</p></div>
             ) : canAct ? (
               <>
-                <div className="night-action-title"><span>SÉLECTIONNE UNE CIBLE</span><b>{living.filter(canTargetPlayer).length} choix</b></div>
+                <div className="night-action-title"><span>{role?.role === 'BUS_DRIVER' ? 'SÉLECTIONNE DEUX JOUEURS' : role?.role === 'VETERAN' ? 'DÉCLENCHE TON ALERTE' : 'SÉLECTIONNE UNE CIBLE'}</span><b>{living.filter(canTargetPlayer).length} choix</b></div>
                 <div className="phase-player-grid">{living.map((player) => playerOption(player))}</div>
                 <div className={`night-confirm-state ${actionConfirmed ? 'confirmed' : ''}`}>
                   <span>{actionConfirmed ? '✓ ACTION ENREGISTRÉE' : theme.action}</span>
-                  <small>{nightTarget ? 'Tu peux encore modifier ta cible.' : 'Choisis un joueur pour agir.'}</small>
+                  <small>{role?.role === 'BUS_DRIVER' && nightTarget && !nightSecondaryTarget
+                    ? 'Choisis maintenant le deuxième joueur.'
+                    : nightTarget ? 'Tu peux encore modifier ton choix.' : 'Choisis un joueur pour agir.'}</small>
                 </div>
               </>
             ) : (
@@ -1081,10 +1127,11 @@ function PhaseCenterStage({
   if (phase === 'DAY_VOTE') {
     return (
       <section className="phase-stage vote-stage">
-        <header className="phase-stage-heading"><div><small>JOUR {round} · ACCUSATION</small><h2>DÉSIGNE UN SUSPECT</h2></div><time><small>FIN DU VOTE</small>{timer}</time></header>
+        <div className="vote-crowd" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /></div>
+        <header className="phase-stage-heading"><div><small>JOUR {round} · LA PLACE PUBLIQUE</small><h2>QUI DEVRA RÉPONDRE DEVANT LA VILLE ?</h2></div><time><small>LA FOULE TRANCHE DANS</small>{timer}</time></header>
         <div className="vote-stage-layout">
           <div className="vote-candidates">{living.map((player) => playerOption(player, 'vote'))}</div>
-          <aside><span className="vote-box-icon">🗳️</span><h3>{myVote ? 'VOTE ENREGISTRÉ' : 'À TON TOUR DE VOTER'}</h3><p>{myVote ? 'Tu peux modifier ton choix jusqu’à la clôture.' : 'Le suspect le plus désigné sera envoyé au procès.'}</p>{Object.entries(votes).map(([id, voterIds]) => voterIds.length ? <div className="live-vote-row" key={id}><span>{players.find((p) => p.userId === id)?.username}</span><b>{voterIds.length}</b></div> : null)}</aside>
+          <aside className="ballot-booth"><span className="vote-box-icon">🗳️</span><small>TON BULLETIN</small><h3>{myVote ? 'TA VOIX EST DÉPOSÉE' : 'LA VILLE ATTEND TON CHOIX'}</h3><p>{myVote ? 'Tant que la cloche n’a pas sonné, tu peux encore changer d’avis.' : 'Désigne celui qui devra se défendre devant tous.'}</p><div className="ballot-status">{myVote ? <><span>ACCUSATION</span><strong>{players.find((player) => player.userId === myVote)?.username}</strong></> : <><span>BULLETIN VIERGE</span><strong>—</strong></>}</div></aside>
         </div>
         {footer(true)}
       </section>
@@ -1135,7 +1182,33 @@ function InvestigationResult({ result }) {
   if (result.kind === 'crimes') text = `${result.targetUsername} : ${(result.crimes ?? []).join(', ') || 'aucun crime connu'}.`;
   if (result.kind === 'visit') text = `${result.targetUsername} a visité ${result.visitedUsername ?? 'personne'}.`;
   if (result.kind === 'watch') text = `Visiteurs de ${result.targetUsername} : ${(result.visitorUsernames ?? []).join(', ') || 'aucun'}.`;
+  if (result.kind === 'spy') text = `La Mafia s’est intéressée à : ${(result.targetUsernames ?? []).join(', ') || 'personne'}.`;
   return <div className="investigation-result"><small>RÉSULTAT DE LA NUIT</small><b>{text}</b></div>;
+}
+
+function InvestigationHud({ open, onToggle, onOpenDossier, notes, evidence, players, result, round }) {
+  const tracked = Object.entries(notes ?? {})
+    .filter(([, entry]) => entry?.text || (entry?.suspicion && entry.suspicion !== '?'))
+    .slice(0, 3);
+  const recentEvidence = [...(evidence ?? [])].sort((a, b) => b.createdAt - a.createdAt).slice(0, 2);
+  if (!open) {
+    return <button className="intel-hud-collapsed" onClick={onToggle}><span>🕵️</span> FIL D’ENQUÊTE <b>{tracked.length + recentEvidence.length}</b></button>;
+  }
+  return (
+    <aside className="investigation-hud">
+      <header><div><small>TOUR {round}</small><strong>FIL D’ENQUÊTE</strong></div><button onClick={onToggle}>−</button></header>
+      <div className="intel-hud-content">
+        {result && <InvestigationResult result={result} />}
+        {tracked.map(([userId, entry]) => {
+          const player = players.find((item) => item.userId === userId);
+          return <article key={userId} className={`intel-line intel-${String(entry.suspicion ?? 'unknown').toLowerCase()}`}><span>{entry.suspicion === 'MAFIA' ? '◆' : entry.suspicion === 'TOWN' ? '✦' : '?'}</span><div><b>{player?.username ?? 'Inconnu'}</b><p>{entry.text || `Soupçon : ${entry.suspicion}`}</p></div></article>;
+        })}
+        {recentEvidence.map((item) => <article key={item.id} className="intel-line public"><span>🧷</span><div><b>{players.find((player) => player.userId === item.subjectId)?.username ?? 'Inconnu'}</b><p>{item.text}</p></div></article>)}
+        {!result && tracked.length === 0 && recentEvidence.length === 0 && <p className="intel-empty">Aucune piste pour le moment. Observe les votes et prends des notes.</p>}
+      </div>
+      <button className="intel-open-dossier" onClick={onOpenDossier}>OUVRIR LE DOSSIER COMPLET <span>→</span></button>
+    </aside>
+  );
 }
 
 function ReplayTimeline({ events, players }) {

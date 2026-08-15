@@ -34,19 +34,18 @@ export default function GamePanel({
   const alive = players.filter((p) => p.isAlive).length;
 
   return (
-    <div className="panel-overlay">
-      <div className="panel">
+    <div className="panel-overlay dossier-overlay" onMouseDown={onClose}>
+      <div className="panel investigation-dossier" onMouseDown={(event) => event.stopPropagation()}>
         {/* ── Header ── */}
         <div className="panel-header">
           <div>
-            <div className="cinzel" style={{ color: 'var(--gold)', fontSize: 13, letterSpacing: 3 }}>
-              📖 DOSSIER DE PARTIE
-            </div>
-            <div className="dim" style={{ fontSize: 12, fontStyle: 'italic' }}>
+            <div className="dossier-kicker">BUREAU DES INVESTIGATIONS</div>
+            <div className="dossier-title">📖 CARNET D’ENQUÊTE</div>
+            <div className="dossier-meta">
               Tour {round} · {alive} joueurs en vie
             </div>
           </div>
-          <button style={{ border: 'none', fontSize: 18, padding: '4px 10px' }} onClick={onClose}>✕</button>
+          <button className="dossier-close" onClick={onClose}>FERMER <b>✕</b></button>
         </div>
 
         {/* ── Content ── */}
@@ -90,15 +89,14 @@ function PlayersTab({ players, myId, notes, onUpdateNote }) {
 
   return (
     <div>
-      {players.filter((p) => p.userId !== myId).map((p) => {
+      <div className="dossier-player-grid">
+      {players.filter((p) => p.userId !== myId).map((p, index) => {
         const n = notes[p.userId] ?? {};
         return (
-          <div key={p.userId} className="card"
-               style={{ padding: 12, marginBottom: 10, opacity: p.isAlive ? 1 : 0.5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="cinzel" style={{ fontSize: 13 }}>
-                {p.isAlive ? '' : '💀 '}{p.username}{p.isBot ? ' 🤖' : ''}
-              </span>
+          <article key={p.userId} className={`dossier-player ${p.isAlive ? '' : 'dead'} suspicion-${String(n.suspicion ?? 'unknown').toLowerCase()}`}>
+            <div className="dossier-player-head">
+              <span className="dossier-player-number">{String(index + 1).padStart(2, '0')}</span>
+              <div><strong>{p.isAlive ? '' : '💀 '}{p.username}{p.isBot ? ' 🤖' : ''}</strong><small>{p.isAlive ? 'DOSSIER ACTIF' : ROLE_LABELS[p.role] ?? 'ÉLIMINÉ'}</small></div>
               {p.isAlive ? (
                 <select value={n.suspicion ?? '?'}
                         onChange={(e) => update(p.userId, { suspicion: e.target.value })}>
@@ -109,18 +107,22 @@ function PlayersTab({ players, myId, notes, onUpdateNote }) {
                   ))}
                 </select>
               ) : (
-                <span className="dim" style={{ fontSize: 12 }}>
-                  {ROLE_LABELS[p.role] ?? ''}
-                </span>
+                <span className="dossier-dead-role">{ROLE_LABELS[p.role] ?? ''}</span>
               )}
             </div>
-            <input style={{ marginTop: 8, fontSize: 13, padding: '7px 10px' }}
-                   placeholder="Note personnelle…"
+            {p.isAlive && <div className="quick-suspicion">
+              <button className={n.suspicion === '?' ? 'active' : ''} onClick={() => update(p.userId, { suspicion: '?' })}>INCONNU</button>
+              <button className={n.suspicion === 'TOWN' ? 'active town' : 'town'} onClick={() => update(p.userId, { suspicion: 'TOWN' })}>TOWN</button>
+              <button className={n.suspicion === 'MAFIA' ? 'active mafia' : 'mafia'} onClick={() => update(p.userId, { suspicion: 'MAFIA' })}>MAFIA</button>
+            </div>}
+            <textarea className="dossier-note"
+                   placeholder="Consigne ici ses votes, contradictions, visites ou revendications…"
                    value={n.text ?? ''}
                    onChange={(e) => update(p.userId, { text: e.target.value })} />
-          </div>
+          </article>
         );
       })}
+      </div>
     </div>
   );
 }
