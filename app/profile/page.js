@@ -5,15 +5,10 @@ import { useRouter } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
+import { ROLE_GUIDE } from '@/lib/roleGuide';
 
-const ROLE_LABELS = {
-  CITIZEN: 'Citoyen', MAFIOSO: 'Mafioso', SHERIFF: 'Shérif', DETECTIVE: 'Détective',
-  INVESTIGATOR: 'Enquêteur', DOCTOR: 'Médecin', VIGILANTE: 'Vigilante',
-};
-const ROLE_EMOJI = {
-  CITIZEN: '🏘️', MAFIOSO: '🔪', SHERIFF: '⭐', DETECTIVE: '👣',
-  INVESTIGATOR: '🔎', DOCTOR: '⚕️', VIGILANTE: '🔫',
-};
+const ROLE_LABELS = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.name]));
+const ROLE_EMOJI  = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.emoji]));
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -112,23 +107,30 @@ export default function ProfilePage() {
         <div>
           {history.length === 0 && <div className="meta-empty"><strong>AUCUNE PARTIE ARCHIVÉE</strong><p>Votre historique apparaîtra après votre première nuit.</p></div>}
           {history.map((h) => (
-            <div key={h.id} className="achievement-row">
+            <div key={h.id}
+                 className={`achievement-row history-row ${h.gameId ? 'clickable' : ''}`}
+                 role={h.gameId ? 'button' : undefined}
+                 tabIndex={h.gameId ? 0 : undefined}
+                 title={h.gameId ? 'Voir le déroulé complet de cette partie' : 'Partie jouée avant l’archivage détaillé'}
+                 onClick={() => h.gameId && router.push(`/history/${h.gameId}`)}
+                 onKeyDown={(e) => e.key === 'Enter' && h.gameId && router.push(`/history/${h.gameId}`)}>
               <span className="emoji">{ROLE_EMOJI[h.role] ?? '❓'}</span>
               <div style={{ flex: 1 }}>
-                <div className="cinzel" style={{ fontSize: 13 }}>
+                <div className="cinzel" style={{ fontSize: 16 }}>
                   {ROLE_LABELS[h.role] ?? h.role}
-                  <span style={{ marginLeft: 10, fontSize: 11,
+                  <span style={{ marginLeft: 10, fontSize: 13,
                                  color: h.won ? 'var(--gold-hi)' : 'var(--text-dim)' }}>
                     {h.won ? '👑 VICTOIRE' : '💀 DÉFAITE'}
                   </span>
                 </div>
-                <div className="dim" style={{ fontSize: 12 }}>
+                <div className="dim" style={{ fontSize: 14 }}>
                   {new Date(h.playedAt).toLocaleString('fr-FR')} · {h.rounds} tours
                   {h.survived ? ' · survivant' : ' · éliminé'}
                   {h.kills > 0 ? ` · ${h.kills} élim.` : ''}
                   {h.saves > 0 ? ` · ${h.saves} soins` : ''}
                 </div>
               </div>
+              {h.gameId && <span className="history-open">DÉTAIL →</span>}
             </div>
           ))}
         </div>

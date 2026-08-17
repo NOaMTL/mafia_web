@@ -515,6 +515,8 @@ export default function GamePage() {
   const isAlive = me?.isAlive ?? true;
   const mafiaTeammates = role?.team === 'MAFIA' ? (role.teammates ?? []) : [];
   const mafiaTeammateIds = new Set(mafiaTeammates.map((p) => p.userId));
+  // userId → rôle du complice (tooltip au survol dans le rail droit).
+  const mafiaTeammateRoles = new Map(mafiaTeammates.map((p) => [p.userId, p.role]));
   const abilityResource = role?.resources?.find((resource) => resource.key === 'ability');
   const selfHealResource = role?.resources?.find((resource) => resource.key === 'selfHeal');
   const limitedPowerExhausted = Boolean(abilityResource && abilityResource.remaining <= 0);
@@ -546,7 +548,7 @@ export default function GamePage() {
   if (!isAlive) writableTabs.push('dead');
   else {
     if (role?.team === 'MAFIA') writableTabs.push('mafia');
-    if (isMediumSeance) writableTabs.push('dead');
+    if (role?.role === 'MEDIUM' && isNightPhase) writableTabs.push('dead');
     if (DAY_PHASES.includes(phase)) writableTabs.push('day');
   }
 
@@ -1176,6 +1178,9 @@ export default function GamePage() {
             <div className="panel-title">JOUEURS <span className="dim">{aliveCount}/{players.length}</span></div>
             {players.map((p) => (
               <div key={p.userId}
+                   title={mafiaTeammateIds.has(p.userId)
+                     ? `Complice — ${ROLE_LABELS[mafiaTeammateRoles.get(p.userId)] ?? 'Mafia'}`
+                     : undefined}
                    className={`roster-row ${p.isAlive ? '' : 'dead-row'} ${mafiaTeammateIds.has(p.userId) ? 'mafia-mate-row' : ''}`}>
                 <span className="dot" />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
