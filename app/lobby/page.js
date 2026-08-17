@@ -64,9 +64,10 @@ export default function LobbyHome() {
           <h2>REJOINDRE UNE PARTIE</h2>
           <p>Saisissez le code communiqué par l&apos;organisateur de la partie.</p>
           <form onSubmit={joinLobby} className="join-form">
-            <input aria-label="Code de la partie" placeholder="CODE" value={code} maxLength={6}
-                   onChange={(e) => setCode(e.target.value)} />
-            <button disabled={busy || !code.trim()} type="submit">REJOINDRE</button>
+            <input aria-label="Code de la partie" placeholder="ABC123" value={code} minLength={6} maxLength={6}
+                   pattern="[A-Z0-9]{6}" autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                   onChange={(e) => setCode(e.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase())} />
+            <button disabled={busy || code.length !== 6} type="submit">REJOINDRE</button>
           </form>
         </section>
       </div>
