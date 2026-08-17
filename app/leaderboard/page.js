@@ -2,31 +2,52 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSession, API_URL, getToken } from '@/lib/api';
+import { api, clearSession, getSession } from '@/lib/api';
 import { getAvatarMap } from '@/lib/avatars';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
+function extractRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.data)) return payload.data;
+  throw new Error('Le serveur a renvoyé un classement invalide.');
+}
+
 export default function LeaderboardPage() {
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [rows, setRows]       = useState(null);
   const [avatarMap, setAvatarMap] = useState({});
+  const [error, setError]     = useState('');
+  const [requestKey, setRequestKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     const s = getSession();
     if (!s) { router.replace('/'); return; }
     setSession(s);
     getAvatarMap().then(setAvatarMap);
-    fetch(`${API_URL}/stats/leaderboard`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then((r) => r.json())
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [router]);
+    setRows(null);
+    setError('');
+    api.getLeaderboard()
+      .then((payload) => {
+        if (!cancelled) setRows(extractRows(payload));
+      })
+      .catch((requestError) => {
+        if (cancelled) return;
+        if (requestError?.status === 401) {
+          clearSession();
+          router.replace('/auth');
+          return;
+        }
+        setRows([]);
+        setError(requestError?.message ?? 'Impossible de charger le classement.');
+      });
+    return () => { cancelled = true; };
+  }, [router, requestKey]);
 
   if (!session) return null;
 
@@ -39,11 +60,18 @@ export default function LeaderboardPage() {
                    subtitle="Les familles les plus redoutées de la ville." />
 
       {rows === null && <div className="meta-loading"><span /> Chargement du classement…</div>}
-      {rows?.length === 0 && (
+      {error && (
+        <div className="meta-empty leaderboard-error">
+          <strong>CLASSEMENT INDISPONIBLE</strong>
+          <p>{error}</p>
+          <button onClick={() => setRequestKey((key) => key + 1)}>RÉESSAYER</button>
+        </div>
+      )}
+      {!error && rows?.length === 0 && (
         <div className="meta-empty"><strong>AUCUN DOSSIER CLASSÉ</strong><p>Les premières victoires apparaîtront ici.</p></div>
       )}
 
-      {(rows ?? []).map((r) => {
+      {Array.isArray(rows) && rows.map((r) => {
         const url  = r.avatarId ? avatarMap[r.avatarId] : null;
         const isMe = r.username === session.username;
         return (
@@ -61,7 +89,7 @@ export default function LeaderboardPage() {
               {url
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={url} alt="" style={{ width: '100%', height: '100%' }} />
-                : <span className="cinzel" style={{ fontSize: 14 }}>{r.username[0]}</span>}
+                : <span className="cinzel" style={{ fontSize: 14 }}>{r.username?.[0] ?? '?'}</span>}
             </div>
             <div style={{ flex: 1 }}>
               <div className="cinzel" style={{ fontSize: 13,

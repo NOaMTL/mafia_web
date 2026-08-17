@@ -14,10 +14,9 @@ const ROLE_LABELS = {
 };
 
 const SUSPICIONS = ['?', 'TOWN', 'MAFIA', ...ROLE_GUIDE.map((role) => role.key)];
-const EVIDENCE_LABELS = { SUSPICION: 'Soupçon', CLAIM: 'Rôle revendiqué', OBSERVATION: 'Observation' };
 
 /**
- * DOSSIER D’ENQUÊTE — source unique pour les notes, preuves et archives :
+ * DOSSIER D’ENQUÊTE — source unique pour les notes privées et les archives :
  *   Joueurs   — list + personal notes + role suspicion per player
  *   Testament — death note editor
  *   Journal   — chronological game log
@@ -25,10 +24,11 @@ const EVIDENCE_LABELS = { SUSPICION: 'Soupçon', CLAIM: 'Rôle revendiqué', OBS
  */
 export default function GamePanel({
   open, onClose, players, myId, myRole, round,
-  notes, onUpdateNote, evidence, onAddEvidence, onRemoveEvidence, canPublishEvidence,
+  notes, onUpdateNote,
   will, setWill, onSaveWill, log,
 }) {
   const [tab, setTab] = useState(0);
+  const activeTab = Math.min(tab, 3);
 
   if (!open) return null;
 
@@ -51,26 +51,19 @@ export default function GamePanel({
 
         {/* ── Content ── */}
         <div className="panel-body">
-          {tab === 0 && (
+          {activeTab === 0 && (
             <PlayersTab players={players} myId={myId} notes={notes} onUpdateNote={onUpdateNote} />
           )}
-          {tab === 1 && (
-            <EvidenceTab
-              players={players} myId={myId} items={evidence}
-              onAdd={onAddEvidence} onRemove={onRemoveEvidence}
-              canPublish={canPublishEvidence}
-            />
-          )}
-          {tab === 2 && <WillTab will={will} setWill={setWill} onSave={onSaveWill} />}
-          {tab === 3 && <LogTab log={log} />}
-          {tab === 4 && <RolesTab myRole={myRole} />}
+          {activeTab === 1 && <WillTab will={will} setWill={setWill} onSave={onSaveWill} />}
+          {activeTab === 2 && <LogTab log={log} />}
+          {activeTab === 3 && <RolesTab myRole={myRole} />}
         </div>
 
         {/* ── Bottom nav ── */}
         <div className="panel-nav">
-          {['🕵️ JOUEURS', '🧷 PREUVES', '📜 TESTAMENT', '🧾 CHRONOLOGIE', '📖 RÔLES'].map((label, i) => (
+          {['🕵️ JOUEURS', '📜 TESTAMENT', '🧾 CHRONOLOGIE', '📖 RÔLES'].map((label, i) => (
             <button key={i}
-                    className={tab === i ? 'active' : ''}
+                    className={activeTab === i ? 'active' : ''}
                     onClick={() => setTab(i)}>
               {label}
             </button>
@@ -141,71 +134,6 @@ function PlayersTab({ players, myId, notes, onUpdateNote }) {
   );
 }
 
-// ─── Tab: shared evidence board ──────────────────────────────────────────────
-
-function EvidenceTab({ players, myId, items, onAdd, onRemove, canPublish }) {
-  const [subjectId, setSubjectId] = useState(players.find((p) => p.userId !== myId)?.userId ?? '');
-  const [type, setType] = useState('SUSPICION');
-  const [text, setText] = useState('');
-
-  function publish() {
-    if (!subjectId || !text.trim()) return;
-    onAdd({ subjectId, type, text: text.trim() });
-    setText('');
-  }
-
-  const byNewest = [...(items ?? [])].sort((a, b) => b.createdAt - a.createdAt);
-  return (
-    <div className="evidence-board">
-      <div className="evidence-intro">
-        <span>TABLEAU COLLECTIF</span>
-        <p>Ces éléments sont publics. La Mafia peut mentir autant que le Village peut se tromper.</p>
-      </div>
-
-      {canPublish && (
-        <div className="evidence-composer">
-          <div className="evidence-fields">
-            <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
-              {players.filter((p) => p.userId !== myId).map((p) => (
-                <option key={p.userId} value={p.userId}>{p.username}</option>
-              ))}
-            </select>
-            <select value={type} onChange={(e) => setType(e.target.value)}>
-              {Object.entries(EVIDENCE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-            </select>
-          </div>
-          <textarea
-            value={text}
-            maxLength={240}
-            placeholder="Décrivez un vote étrange, une contradiction ou un rôle revendiqué…"
-            onChange={(e) => setText(e.target.value)}
-          />
-          <button className="primary" disabled={!text.trim()} onClick={publish}>ÉPINGLER LA PREUVE</button>
-        </div>
-      )}
-
-      <div className="evidence-list">
-        {byNewest.length === 0 && <p className="dim">Le tableau est encore vide.</p>}
-        {byNewest.map((item) => {
-          const subject = players.find((p) => p.userId === item.subjectId);
-          return (
-            <article key={item.id} className={`evidence-note type-${item.type.toLowerCase()}`}>
-              <div className="evidence-note-head">
-                <span>{EVIDENCE_LABELS[item.type]}</span><small>TOUR {item.round}</small>
-              </div>
-              <strong>{subject?.username ?? 'Joueur inconnu'}</strong>
-              <p>{item.text}</p>
-              <footer>Épinglé par {item.authorUsername}
-                {item.authorId === myId && <button onClick={() => onRemove(item.id)}>RETIRER</button>}
-              </footer>
-            </article>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Tab: will ────────────────────────────────────────────────────────────────
 
 function WillTab({ will, setWill, onSave }) {
@@ -248,50 +176,40 @@ function LogTab({ log }) {
 // ─── Tab: roles guide ─────────────────────────────────────────────────────────
 
 function RolesTab({ myRole }) {
+  const ownTeam = ROLE_GUIDE.find((role) => role.key === myRole)?.team ?? 'TOWN';
+  const [team, setTeam] = useState(ownTeam);
+  const visibleRoles = ROLE_GUIDE.filter((role) => role.team === team);
+
   return (
-    <div>
-      {ROLE_GUIDE.map((r) => {
+    <div className={`dossier-roles team-${team.toLowerCase()}`}>
+      <header className="dossier-roles-header">
+        <div><small>ARCHIVES DES RÔLES</small><h2>QUI PEUT SE CACHER DANS LA VILLE ?</h2></div>
+        <span>{visibleRoles.length} RÔLES</span>
+      </header>
+      <div className="dossier-role-tabs" role="tablist" aria-label="Rôles par camp">
+        <button role="tab" aria-selected={team === 'TOWN'} className={team === 'TOWN' ? 'active town' : 'town'} onClick={() => setTeam('TOWN')}>🏘️ TOWN <b>{ROLE_GUIDE.filter((role) => role.team === 'TOWN').length}</b></button>
+        <button role="tab" aria-selected={team === 'MAFIA'} className={team === 'MAFIA' ? 'active mafia' : 'mafia'} onClick={() => setTeam('MAFIA')}>🔪 MAFIA <b>{ROLE_GUIDE.filter((role) => role.team === 'MAFIA').length}</b></button>
+      </div>
+      <div className="dossier-role-grid">
+      {visibleRoles.map((r) => {
         const mine = myRole && r.key === myRole;
         return (
-          <div key={r.key} className="card"
-               style={{
-                 padding: 14, marginBottom: 10,
-                 borderColor: mine ? r.color : undefined,
-                 background: mine ? `${r.color}14` : undefined,
-               }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{ fontSize: 22 }}>{r.emoji}</span>
+          <article key={r.key} className={`dossier-role-card ${mine ? 'mine' : ''}`} style={{ '--guide-color': r.color }}>
+            <div className="dossier-role-card-head">
+              <span>{r.emoji}</span>
               <div>
-                <span className="cinzel" style={{ color: r.color, fontSize: 14, fontWeight: 700 }}>
-                  {r.name}
-                </span>
-                {mine && (
-                  <span className="cinzel"
-                        style={{ marginLeft: 8, fontSize: 9, color: r.color,
-                                 border: `1px solid ${r.color}`, borderRadius: 5,
-                                 padding: '2px 6px', letterSpacing: 1 }}>
-                    VOUS
-                  </span>
-                )}
-                <div className="dim" style={{ fontSize: 10, letterSpacing: 1.5 }}>
-                  CAMP {r.team}
-                </div>
+                <small>CAMP {r.team}</small>
+                <h3>{r.name}</h3>
               </div>
+              {mine && <b>VOTRE RÔLE</b>}
             </div>
-            <p style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.45 }}>
-              {r.description}
-            </p>
-            {r.nightAction && (
-              <p style={{ fontSize: 13, color: r.color, fontStyle: 'italic', marginTop: 6 }}>
-                🌙 {r.nightAction}
-              </p>
-            )}
-            <p style={{ fontSize: 12.5, color: 'var(--gold)', fontStyle: 'italic', marginTop: 6 }}>
-              💡 {r.tip}
-            </p>
-          </div>
+            <p>{r.description}</p>
+            {r.nightAction && <div className="dossier-role-power"><span>🌙 POUVOIR</span><strong>{r.nightAction}</strong></div>}
+            <footer><span>💡</span>{r.tip}</footer>
+          </article>
         );
       })}
+      </div>
     </div>
   );
 }
