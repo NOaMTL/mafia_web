@@ -20,6 +20,7 @@ export default function LobbyWait() {
   const [copied, setCopied]   = useState(false);
   const [chatMsgs, setChatMsgs] = useState([]);
   const [chatText, setChatText] = useState('');
+  const [sideTab, setSideTab]   = useState('roles');
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
 
@@ -58,7 +59,13 @@ export default function LobbyWait() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMsgs.length]);
+  }, [chatMsgs.length, sideTab]);
+
+  useEffect(() => {
+    if (!lobby || !session) return;
+    const me = (lobby.players ?? []).find((player) => player.userId === session.userId);
+    if (me) setReady(Boolean(me.isReady));
+  }, [lobby, session]);
 
   function sendChat(e) {
     e.preventDefault();
@@ -102,7 +109,14 @@ export default function LobbyWait() {
   }, {}));
   const mafiaRoles = groupedRoles.filter((item) => item.team === 'MAFIA');
   const townRoles = groupedRoles.filter((item) => item.team === 'TOWN');
-  const displayedSlots = Math.max(4, players.length);
+  const maxPlayers = lobby.maxPlayers ?? 15;
+  const freeSlots = Math.max(0, maxPlayers - players.length);
+  const orderedPlayers = [...players].sort((a, b) => {
+    if (a.userId === lobby.hostId) return -1;
+    if (b.userId === lobby.hostId) return 1;
+    if (a.isReady !== b.isReady) return Number(b.isReady) - Number(a.isReady);
+    return a.username.localeCompare(b.username, 'fr');
+  });
 
   return (
     <main className="page meta-page lobby-wait">
@@ -128,91 +142,102 @@ export default function LobbyWait() {
       </div>
 
       <section className="lobby-status-overview">
-        <div><small>JOUEURS</small><strong>{players.length}<span>/15</span></strong></div>
+        <div><small>JOUEURS</small><strong>{players.length}<span>/{maxPlayers}</span></strong></div>
         <div><small>PRÊTS</small><strong>{readyCount}<span>/{players.length}</span></strong></div>
-        <div className={players.length >= 4 ? 'ready' : ''}><small>ÉTAT DE LA TABLE</small><strong>{players.length >= 4 ? 'COMPLÈTE' : `${4 - players.length} MANQUANT${4 - players.length > 1 ? 'S' : ''}`}</strong></div>
+        <div className={players.length >= 4 ? 'ready' : ''}><small>ÉTAT DE LA TABLE</small><strong>{players.length >= 4 ? 'JOUABLE' : `${4 - players.length} MANQUANT${4 - players.length > 1 ? 'S' : ''}`}</strong></div>
       </section>
 
-      <section className="card lobby-composition-card">
-        <header>
-          <div><small>ROLE-LIST ADAPTATIVE</small><h2>RÔLES DE CETTE PARTIE</h2><p>La composition s’ajuste automatiquement au nombre de joueurs présents.</p></div>
-          <span className="composition-count">{players.length < 4 ? 'APERÇU 4 JOUEURS' : `${previewCount} JOUEURS`}</span>
-        </header>
-        <div className="lobby-role-groups">
-          <div className="lobby-role-team mafia">
-            <div className="role-team-heading"><span>◆ MAFIA</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'MAFIA').length} rôle(s)</b></div>
-            <div>{mafiaRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
-          </div>
-          <div className="lobby-role-team town">
-            <div className="role-team-heading"><span>✦ TOWN</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'TOWN').length} rôle(s)</b></div>
-            <div>{townRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
-          </div>
-        </div>
-        {players.length < 4 && <div className="composition-warning">Il faut encore {4 - players.length} joueur{4 - players.length > 1 ? 's' : ''}. Cette composition est un aperçu du minimum jouable.</div>}
-      </section>
+      <div className="lobby-wait-grid lobby-room-layout">
+        <section className="card lobby-player-card lobby-player-list-card">
+          <header className="lobby-card-heading">
+            <div><small>TABLE DE JEU · PARTICIPANTS</small><h2>JOUEURS DE LA PARTIE</h2></div>
+            <span>{readyCount}/{players.length} PRÊTS</span>
+          </header>
 
-      <div className="lobby-wait-grid">
-      <section className="card lobby-player-card">
-        <header className="lobby-card-heading"><div><small>TABLE DE JEU</small><h2>JOUEURS</h2></div><span>{readyCount} PRÊT{readyCount > 1 ? 'S' : ''}</span></header>
+          <div className="lobby-player-list">
+            {orderedPlayers.map((player, index) => {
+              const url = player.avatarId ? avatarMap[player.avatarId] : null;
+              const isHost = player.userId === lobby.hostId;
+              const isMe = player.userId === session.userId;
+              return (
+                <article key={player.userId} className={`lobby-player-row ${player.isReady ? 'is-ready' : ''} ${isHost ? 'is-host' : ''}`}>
+                  <span className="lobby-player-index">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="lobby-player-avatar">
+                    {url
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={url} alt="" />
+                      : (player.isBot ? '🤖' : (player.username?.[0]?.toUpperCase() ?? '?'))}
+                  </span>
+                  <span className="lobby-player-identity">
+                    <strong>{player.username}</strong>
+                    <small>{isHost ? 'ORGANISATEUR' : player.isBot ? 'JOUEUR AUTOMATIQUE' : 'INVITÉ'}</small>
+                  </span>
+                  <span className="lobby-player-badges">
+                    {isMe && <b className="you">VOUS</b>}
+                    {isHost && <b className="host">♛ HÔTE</b>}
+                    {player.isBot && <b>BOT</b>}
+                  </span>
+                  <span className={`lobby-ready-state ${player.isReady ? 'ready' : ''}`}><i />{player.isReady ? 'PRÊT' : 'EN ATTENTE'}</span>
+                </article>
+              );
+            })}
+            {freeSlots > 0 && (
+              <article className="lobby-player-row lobby-invite-row">
+                <span className="lobby-player-index">＋</span>
+                <span className="lobby-player-avatar">⌁</span>
+                <span className="lobby-player-identity"><strong>INVITER DES JOUEURS</strong><small>{freeSlots} PLACE{freeSlots > 1 ? 'S' : ''} DISPONIBLE{freeSlots > 1 ? 'S' : ''}</small></span>
+                <button onClick={() => { navigator.clipboard?.writeText(lobby.code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? '✓ COPIÉ' : `COPIER ${lobby.code}`}</button>
+              </article>
+            )}
+          </div>
 
-        <div className="players-grid lobby-players-grid">
-          {Array.from({ length: displayedSlots }, (_, index) => players[index] ?? null).map((p, index) => {
-            if (!p) return <div key={`empty-${index}`} className="player-tile lobby-player-tile empty"><div className="avatar">+</div><div className="name">PLACE LIBRE</div><div className="sub">En attente d’un joueur</div></div>;
-            const url = p.avatarId ? avatarMap[p.avatarId] : null;
-            return (
-              <div key={p.userId} className={`player-tile lobby-player-tile ${p.isReady ? 'is-ready' : ''}`}>
-                <div className="avatar">
-                  {url
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={url} alt="" />
-                    : (p.isBot ? '🤖' : (p.username?.[0]?.toUpperCase() ?? '?'))}
+          {error && <div className="error lobby-inline-error">{error}</div>}
+          <div className="lobby-ready-actions">
+            <button className={ready ? 'danger' : 'primary'} onClick={toggleReady}>
+              {ready ? 'ANNULER — JE NE SUIS PLUS PRÊT' : '✓ JE SUIS PRÊT'}
+            </button>
+            {session.userId === lobby.hostId && <button onClick={addBot}>+ AJOUTER UN BOT</button>}
+          </div>
+        </section>
+
+        <aside className="card lobby-side-card">
+          <div className="lobby-side-tabs" role="tablist" aria-label="Informations de la salle">
+            <button role="tab" aria-selected={sideTab === 'roles'} className={sideTab === 'roles' ? 'active' : ''} onClick={() => setSideTab('roles')}><span>♟</span><b>RÔLES</b><small>{rolePreview.length}</small></button>
+            <button role="tab" aria-selected={sideTab === 'discussion'} className={sideTab === 'discussion' ? 'active' : ''} onClick={() => setSideTab('discussion')}><span>💬</span><b>DISCUSSION</b><small>{chatMsgs.length}</small></button>
+          </div>
+
+          {sideTab === 'roles' ? (
+            <div className="lobby-side-panel lobby-roles-tab" role="tabpanel">
+              <header className="lobby-tab-heading"><div><small>ROLE-LIST ADAPTATIVE</small><h2>COMPOSITION PRÉVUE</h2><p>La liste évolue automatiquement avec les arrivées.</p></div><span>{players.length < 4 ? 'APERÇU 4' : previewCount}</span></header>
+              <div className="lobby-role-groups">
+                <div className="lobby-role-team mafia">
+                  <div className="role-team-heading"><span>◆ MAFIA</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'MAFIA').length}</b></div>
+                  <div>{mafiaRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
                 </div>
-                <div className="name">
-                  {p.username}
-                  {p.isBot && <span className="bot-chip">BOT</span>}
-                </div>
-                <div className="sub">
-                  {p.isReady ? '● PRÊT' : '○ EN ATTENTE'}
+                <div className="lobby-role-team town">
+                  <div className="role-team-heading"><span>✦ VILLAGE</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'TOWN').length}</b></div>
+                  <div>{townRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {error && <div className="error" style={{ marginBottom: 12 }}>{error}</div>}
-
-        <div className="lobby-ready-actions">
-          <button className={ready ? 'danger' : 'primary'} onClick={toggleReady}>
-            {ready ? 'ANNULER — JE NE SUIS PLUS PRÊT' : '✓ JE SUIS PRÊT'}
-          </button>
-          <button onClick={addBot}>+ AJOUTER UN BOT</button>
-        </div>
-      </section>
-
-      {/* ── Lobby chat ── */}
-      <section className="card lobby-chat-card">
-        <header className="lobby-card-heading"><div><small>CANAL DE LA SALLE</small><h2>DISCUSSION</h2></div><span>💬</span></header>
-        <div className="chat-messages">
-          {chatMsgs.length === 0 && (
-            <div className="dim" style={{ fontStyle: 'italic', fontSize: 13 }}>
-              Discutez en attendant les autres joueurs…
+              {players.length < 4 && <div className="composition-warning">Encore {4 - players.length} joueur{4 - players.length > 1 ? 's' : ''} requis. La composition affichée est un aperçu.</div>}
+            </div>
+          ) : (
+            <div className="lobby-side-panel lobby-chat-card lobby-chat-tab" role="tabpanel">
+              <header className="lobby-tab-heading"><div><small>CANAL DE LA SALLE</small><h2>DISCUSSION</h2><p>Organisez la partie avant le début de la nuit.</p></div><span>EN LIGNE</span></header>
+              <div className="chat-messages">
+                {chatMsgs.length === 0 && <div className="lobby-chat-empty"><span>💬</span><strong>LE CANAL EST OUVERT</strong><p>Écrivez le premier message.</p></div>}
+                {chatMsgs.map((message, index) => (
+                  <div key={index} className="chat-msg"><span className="author">{message.username}</span><div>{message.message}</div></div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+              <form className="chat-input" onSubmit={sendChat}>
+                <input value={chatText} maxLength={300} placeholder="Votre message…" onChange={(event) => setChatText(event.target.value)} />
+                <button type="submit" disabled={!chatText.trim()}>➤</button>
+              </form>
             </div>
           )}
-          {chatMsgs.map((m, i) => (
-            <div key={i} className="chat-msg">
-              <span className="author">{m.username}</span>
-              <div>{m.message}</div>
-            </div>
-          ))}
-          <div ref={chatEndRef} />
-        </div>
-        <form className="chat-input" onSubmit={sendChat}>
-          <input value={chatText} maxLength={300}
-                 placeholder="Votre message…"
-                 onChange={(e) => setChatText(e.target.value)} />
-          <button type="submit" disabled={!chatText.trim()}>➤</button>
-        </form>
-      </section>
+        </aside>
       </div>
     </main>
   );
