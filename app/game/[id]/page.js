@@ -137,6 +137,7 @@ export default function GamePage() {
   const [detective, setDetective] = useState(null);
   const [nightMsg, setNightMsg]   = useState('');
   const [skipInfo, setSkipInfo]   = useState(null);   // { count, total, voterIds }
+  const [mayorRevealedBy, setMayorRevealedBy] = useState(null); // username du Maire révélé
   const [will, setWill]           = useState('');
   const [offline, setOffline]     = useState([]);     // userIds momentarily disconnected
   const [toasts, setToasts]       = useState([]);
@@ -440,7 +441,12 @@ export default function GamePage() {
     socket.on('sentence:executed',        onExec);
     socket.on('sentence:acquitted',       onAcquit);
     socket.on('game:over',                onOver);
-    socket.on('game:rewards',             onRewards);
+    socket.on('mayor:revealed',           (d) => {
+      setMayorRevealedBy(d.username);
+      addLog('🏛️', `${d.username} se révèle : MAIRE — son vote compte double.`);
+      toast(`🏛️ ${d.username} est le MAIRE — son vote compte désormais double.`);
+    });
+    socket.on('game:rewards', 'mayor:revealed',             onRewards);
     socket.on('night:detective_result',   onDet);
     socket.on('night:consigliere_result', onCons);
     socket.on('night:tracker_result',      onTracker);
@@ -1114,6 +1120,19 @@ export default function GamePage() {
                 <span className="cinzel">{mainAction.label}</span>
                 {mainAction.sub && <span className="sub">{mainAction.sub}</span>}
               </div>
+            )}
+
+            {role?.role === 'MAYOR' && isAlive && !mayorRevealedBy &&
+              DAY_PHASES.includes(phase) && (
+              <button className="primary" style={{ padding: '14px 20px' }}
+                      title="Révélez-vous publiquement : votre vote comptera double."
+                      onClick={() => {
+                        if (confirm('Se révéler comme MAIRE ? Toute la ville le saura, et votre vote comptera double.')) {
+                          send('mayor:reveal', {});
+                        }
+                      }}>
+                🏛️ SE RÉVÉLER
+              </button>
             )}
 
           </div>
