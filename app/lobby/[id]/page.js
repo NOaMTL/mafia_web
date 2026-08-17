@@ -86,6 +86,10 @@ export default function LobbyWait() {
     socketRef.current?.emit('lobby:add_bot', { lobbyId: id });
   }
 
+  function startNow() {
+    socketRef.current?.emit('lobby:start', { lobbyId: id });
+  }
+
   if (!session || !lobby) {
     return (
       <main className="screen-loading">
@@ -199,6 +203,14 @@ export default function LobbyWait() {
               {ready ? 'ANNULER — JE NE SUIS PLUS PRÊT' : '✓ JE SUIS PRÊT'}
             </button>
             {session.userId === lobby.hostId && <button onClick={addBot}>+ AJOUTER UN BOT</button>}
+            {session.userId === lobby.hostId && players.length >= 4 && (
+              <button className="primary" onClick={startNow}
+                      title={readyCount < players.length
+                        ? `${players.length - readyCount} joueur(s) pas encore prêt(s) — lancement forcé`
+                        : 'Tout le monde est prêt'}>
+                ▶ LANCER LA PARTIE
+              </button>
+            )}
           </div>
         </section>
 

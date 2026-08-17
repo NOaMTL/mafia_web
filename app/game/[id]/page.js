@@ -1190,6 +1190,9 @@ export default function GamePage() {
                 </span>
                 {mafiaTeammateIds.has(p.userId) && <span className="mafia-mate-badge">MAFIA</span>}
                 {p.roleHidden && <span className="cleaned-badge">NETTOYÉ</span>}
+                {!p.isAlive && p.role && (
+                  <span className="dead-role-chip">{ROLE_EMOJI[p.role] ?? ''} {ROLE_LABELS[p.role] ?? p.role}</span>
+                )}
                 {!p.isAlive && <span style={{ fontSize: 11 }}>💀</span>}
               </div>
             ))}

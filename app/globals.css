@@ -3818,7 +3818,7 @@ html[data-theme="light"] .toast {
   background: rgba(201,154,76,.035);
 }
 .distribution-intro span { color: #d0a04f; font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 700; letter-spacing: 1px; }
-.distribution-intro p { max-width: 740px; color: rgba(255,255,255,.48); font-size: 11px; line-height: 1.55; }
+.distribution-intro p { max-width: 740px; color: rgba(255,255,255,.58); font-size: 14.5px; line-height: 1.55; }
 .distribution-row {
   display: grid;
   grid-template-columns: 72px minmax(220px, .75fr) minmax(300px, 1.25fr);
@@ -3831,10 +3831,10 @@ html[data-theme="light"] .toast {
   background: rgba(5,7,8,.64);
 }
 .distribution-row > strong { color: #e4ded4; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; line-height: .8; text-align: center; }
-.distribution-row > strong small { display: block; margin-top: 7px; color: rgba(255,255,255,.28); font-family: 'Inter', sans-serif; font-size: 7px; letter-spacing: 1px; }
-.distribution-row label { display: block; margin-bottom: 5px; color: rgba(255,255,255,.34); font-size: 7px; font-weight: 800; letter-spacing: 1.2px; }
-.distribution-row section { display: flex; flex-wrap: wrap; gap: 4px; }
-.distribution-role { border: 1px solid rgba(255,255,255,.09); padding: 4px 6px; background: rgba(255,255,255,.025); color: rgba(255,255,255,.63); font-size: 9px; }
+.distribution-row > strong small { display: block; margin-top: 7px; color: rgba(255,255,255,.4); font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 1px; }
+.distribution-row label { display: block; margin-bottom: 6px; color: rgba(255,255,255,.48); font-size: 11px; font-weight: 800; letter-spacing: 1.2px; }
+.distribution-row section { display: flex; flex-wrap: wrap; gap: 6px; }
+.distribution-role { border: 1px solid rgba(255,255,255,.09); padding: 6px 9px; background: rgba(255,255,255,.025); color: rgba(255,255,255,.75); font-size: 13px; }
 .distribution-role.mafia { border-color: rgba(178,52,45,.32); background: rgba(135,30,27,.09); color: #cf6b63; }
 
 @media (max-width: 760px) {
@@ -6622,3 +6622,214 @@ html[data-theme="light"] .admin-show-password span { color: #35404a !important; 
 @media (max-width: 780px) {
   .hd-columns { grid-template-columns: 1fr; }
 }
+
+/* ── Le toggle de thème (fixed, bas-gauche) recouvre la saisie du chat en
+   partie : on le masque sur tous les écrans de jeu. Le choix de thème reste
+   accessible sur le reste de l'app et est conservé en localStorage. ──────── */
+body:has(.game-shell) .theme-toggle,
+body:has(.role-reveal-screen) .theme-toggle,
+body:has(.night-resolve-screen) .theme-toggle,
+body:has(.game-over-screen) .theme-toggle {
+  display: none;
+}
+
+/* Rôle révélé des morts dans le rail des joueurs (sauf corps nettoyé). */
+.dead-role-chip {
+  font-size: 10.5px;
+  letter-spacing: .4px;
+  color: var(--text-dim);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* ── Guide : cartes de rôle cliquables + modale mécaniques ─────────────────── */
+.role-guide-card.clickable { cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.role-guide-card.clickable:hover,
+.role-guide-card.clickable:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--role-color, var(--gold));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+  outline: none;
+}
+.role-more {
+  margin-top: 10px;
+  font-family: var(--font-cinzel, serif);
+  font-size: 10.5px;
+  letter-spacing: 1.5px;
+  color: var(--role-color, var(--gold));
+  opacity: 0;
+  transition: opacity .15s;
+}
+.role-guide-card.clickable:hover .role-more,
+.role-guide-card.clickable:focus-visible .role-more { opacity: 1; }
+
+.role-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 5, 7, .78);
+  backdrop-filter: blur(6px);
+  animation: fadeIn .15s ease;
+}
+.role-modal {
+  width: min(620px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  border: 1px solid var(--role-color, var(--gold));
+  border-radius: 14px;
+  background: var(--panel, #0d0f13);
+  padding: 22px 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .6);
+}
+.role-modal header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.role-modal header h2 {
+  font-family: var(--font-cinzel, serif);
+  font-size: 20px;
+  letter-spacing: 1px;
+  margin: 0;
+  color: var(--role-color, var(--gold-hi));
+}
+.role-guide-icon.big { font-size: 34px; }
+.role-modal-close {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+}
+.role-modal-close:hover { border-color: var(--gold); color: var(--gold-hi); }
+.role-modal-desc { font-size: 15px; line-height: 1.5; margin: 0 0 10px; }
+.role-facts { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+.role-fact {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgba(255,255,255,.07));
+  border-left: 3px solid var(--role-color, var(--gold));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .02);
+}
+.role-fact-icon { font-size: 19px; flex: none; }
+.role-fact-title {
+  font-family: var(--font-cinzel, serif);
+  font-size: 11.5px;
+  letter-spacing: 1.5px;
+  color: var(--role-color, var(--gold));
+  margin-bottom: 3px;
+}
+.role-fact-text { font-size: 13.5px; line-height: 1.5; color: var(--text, #ddd); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Guide : sections par camp ─────────────────────────────────────────────── */
+.guide-team-section { margin-bottom: 30px; }
+.guide-team-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--gold);
+  background: rgba(255, 255, 255, .02);
+}
+.guide-team-section.town  .guide-team-header { border-left-color: #57b07c; }
+.guide-team-section.mafia .guide-team-header { border-left-color: #d05c4c; }
+.guide-team-header h2 {
+  font-family: var(--font-cinzel, serif);
+  font-size: 19px;
+  letter-spacing: 2px;
+  margin: 0;
+}
+.guide-team-section.town  .guide-team-header h2 { color: #57b07c; }
+.guide-team-section.mafia .guide-team-header h2 { color: #d05c4c; }
+.guide-team-header span {
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 2px 11px;
+}
+.guide-team-header p { flex-basis: 100%; margin: 4px 0 0; font-size: 14px; color: var(--text-dim); }
+
+/* ── Guide : déroulement enrichi ───────────────────────────────────────────── */
+.phase-step { display: flex; gap: 16px; margin-bottom: 6px; }
+.phase-step-rail { display: flex; flex-direction: column; align-items: center; }
+.phase-step-badge {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border: 1px solid var(--line-strong);
+  background: rgba(184, 150, 62, .08);
+  flex: none;
+}
+.phase-step.night .phase-step-badge { border-color: rgba(122, 100, 178, .55); background: rgba(89, 70, 148, .14); }
+.phase-step.day   .phase-step-badge { border-color: rgba(203, 155, 76, .5);  background: rgba(203, 155, 76, .1); }
+.phase-step-line { width: 1px; flex: 1; min-height: 22px; background: var(--line-strong); margin-top: 4px; }
+.phase-step-body { flex: 1; padding-bottom: 20px; }
+.phase-step-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 5px; }
+.phase-step-num { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; }
+.phase-step-name { font-size: 16.5px; letter-spacing: 1px; }
+.phase-step-tone {
+  font-size: 10.5px; letter-spacing: 1.2px;
+  border: 1px solid var(--line-strong); border-radius: 20px; padding: 2px 9px;
+  color: var(--text-dim);
+}
+.phase-step-tone.night { color: #a993e0; border-color: rgba(122, 100, 178, .5); }
+.phase-step-tone.day   { color: var(--gold-hi); border-color: rgba(203, 155, 76, .45); }
+.phase-step-desc { font-size: 15px; line-height: 1.55; margin: 0 0 8px; color: var(--text, #ddd); }
+.phase-step-tip {
+  font-size: 13.5px;
+  color: var(--gold-hi);
+  border-left: 2px solid var(--gold);
+  padding: 6px 12px;
+  background: rgba(203, 155, 76, .06);
+  border-radius: 0 6px 6px 0;
+}
+.phase-loop-note {
+  margin: 18px 0 20px;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--text-dim);
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  padding: 12px;
+}
+.phase-loop-note strong { color: var(--gold-hi); }
+.win-conditions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.win-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, .02);
+}
+.win-card.town  { border-color: rgba(87, 176, 124, .45); }
+.win-card.mafia { border-color: rgba(208, 92, 76, .45); }
+.win-card-title {
+  font-family: var(--font-cinzel, serif);
+  font-size: 14px;
+  letter-spacing: 1.5px;
+  margin-bottom: 7px;
+}
+.win-card.town  .win-card-title { color: #57b07c; }
+.win-card.mafia .win-card-title { color: #d05c4c; }
+.win-card p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
+@media (max-width: 640px) { .win-conditions { grid-template-columns: 1fr; } }
