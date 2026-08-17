@@ -141,6 +141,10 @@ export default function GamePage() {
   const [will, setWill]           = useState('');
   const [offline, setOffline]     = useState([]);     // userIds momentarily disconnected
   const [toasts, setToasts]       = useState([]);
+  // Mobile : section active (table / chat / joueurs) — pilotée par les
+  // onglets bas et resynchronisée sur les phases clés.
+  const [mobileTab, setMobileTab] = useState('table');
+  const [topMenuOpen, setTopMenuOpen] = useState(false); // menu ☰ mobile
   const [chatMessages, setChatMessages] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
   const [notes, setNotes]         = useState({});     // userId → { text, suspicion }
@@ -192,6 +196,14 @@ export default function GamePage() {
   useEffect(() => { roundRef.current = round; }, [round]);
   useEffect(() => { roleRef.current = role; }, [role]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Mobile : suivre le rythme de la partie — la nuit et le matin se vivent
+  // sur la table, les votes et jugements dans le panneau joueurs.
+  useEffect(() => {
+    if (phase === 'NIGHT' || phase === 'MORNING_GAZETTE' || phase === 'TRIAL') setMobileTab('table');
+    else if (phase === 'DAY_VOTE' || phase === 'JUDGMENT') setMobileTab('joueurs');
+    else if (phase === 'DAY_DISCUSSION') setMobileTab('chat');
+  }, [phase]);
 
   const addLog = useCallback((icon, text) => {
     setGameLog((l) => [...l, { icon, text, round: roundRef.current }]);
@@ -975,6 +987,37 @@ export default function GamePage() {
                   onClick={() => router.push('/lobby')}>
             QUITTER
           </button>
+
+          {/* Mobile : les boutons ci-dessus sont regroupés dans ce menu ☰ */}
+          <button className="topbar-menu-btn" title="Menu"
+                  aria-expanded={topMenuOpen}
+                  onClick={() => setTopMenuOpen((open) => !open)}>
+            ☰
+          </button>
+          {topMenuOpen && (
+            <div className="topbar-menu" role="menu">
+              {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
+                <button disabled={hasSkipped}
+                        onClick={() => { send('phase:skip_vote', {}); setTopMenuOpen(false); }}>
+                  ⏭ {hasSkipped ? 'Phase passée' : skipInfo ? `Passer la phase · ${skipInfo.count}/${skipInfo.total}` : 'Passer la phase'}
+                </button>
+              )}
+              <button onClick={() => {
+                const nextMuted = toggleMute();
+                setMuted(nextMuted);
+                setAudioSettingsState(getAudioSettings());
+              }}>
+                {muted ? '🔇 Activer le son' : '🔊 Couper le son'}
+              </button>
+              <button onClick={() => { setSettingsOpen(true); setTopMenuOpen(false); }}>
+                Aa Lisibilité &amp; ambiance
+              </button>
+              <button className="menu-danger"
+                      onClick={() => router.push('/lobby')}>
+                🚪 Quitter la partie
+              </button>
+            </div>
+          )}
           {settingsOpen && (
             <GameSettingsPopover
               accessibility={accessibility}
@@ -990,7 +1033,7 @@ export default function GamePage() {
       </div>
 
       {/* ── Main : chat | table | rail ── */}
-      <div className="game-main">
+      <div className={`game-main mobile-${mobileTab}`}>
         {/* Left: chat */}
         <div className="side-panel">
           {isSilenced && <div className="silenced-banner">🤐 RÉDUIT AU SILENCE</div>}
@@ -1286,6 +1329,26 @@ export default function GamePage() {
           )}
         </div>
       </div>
+
+      {/* ── Onglets bas mobile : Table / Chat / Joueurs ── */}
+      <nav className="game-mobile-tabs" aria-label="Sections de la partie">
+        <div className={`mobile-timer ${remaining <= 10 && remaining > 0 ? 'urgent' : ''}`}>
+          <span aria-hidden="true">{ambiance === 'night' ? '🌙' : '☀️'}</span>
+          <b>{String(Math.floor(remaining / 60))}:{String(remaining % 60).padStart(2, '0')}</b>
+          <small>{PHASE_LABELS[phase] ?? ''}</small>
+        </div>
+        {[
+          { key: 'table',   icon: '🎭', label: 'TABLE' },
+          { key: 'chat',    icon: '💬', label: 'CHAT' },
+          { key: 'joueurs', icon: '👥', label: 'JOUEURS' },
+        ].map((t) => (
+          <button key={t.key} className={mobileTab === t.key ? 'active' : ''}
+                  onClick={() => setMobileTab(t.key)}>
+            <span aria-hidden="true">{t.icon}</span>
+            <small>{t.label}</small>
+          </button>
+        ))}
+      </nav>
 
       {/* ── Dossier de partie (drawer) ── */}
       <GamePanel

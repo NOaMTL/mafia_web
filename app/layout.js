@@ -1,5 +1,6 @@
 import './globals.css';
 import ThemeToggle from '@/components/ThemeToggle';
+import MobileNav from '@/components/MobileNav';
 
 export const metadata = {
   title: 'Mafia — Le jeu',
@@ -10,6 +11,9 @@ export const metadata = {
 
 export const viewport = {
   themeColor: '#16161d',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 // Applique le thème sauvegardé avant le premier rendu pour éviter un flash
@@ -22,6 +26,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         {children}
         <ThemeToggle />
+        <MobileNav />
       </body>
     </html>
   );
