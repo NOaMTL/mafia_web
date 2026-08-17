@@ -13,7 +13,7 @@ const CHANNEL_LABELS = {
  * In-game chat with server-resolved channels + a local #SYSTÈME feed
  * (the chronological game log). `available` controls the visible tabs.
  */
-export default function Chat({ messages, available, canWrite, onSend, log = [] }) {
+export default function Chat({ messages, available, canWrite, onSend, log = [], writableTabs = null }) {
   const [tab, setTab]   = useState('day');
   const [text, setText] = useState('');
   const bottomRef       = useRef(null);
@@ -49,9 +49,11 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
     e.preventDefault();
     const t = text.trim();
     if (!t) return;
-    onSend(t);
+    onSend(t, tab);
     setText('');
   }
+
+  const tabWritable = writableTabs ? writableTabs.includes(tab) : canWrite;
 
   return (
     <div className="chat panel-card" style={{ flex: 1, minHeight: 0 }}>
@@ -62,7 +64,7 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
             ? 'CANAL MAFIA · PRIVÉ'
             : tab === 'dead'
               ? 'MONDE DES MORTS · SÉANCE'
-              : canWrite ? 'CANAL OUVERT' : 'LECTURE SEULE'}
+              : tabWritable ? 'CANAL OUVERT' : 'LECTURE SEULE'}
         </small>
       </div>
       <div className="chat-tabs">
@@ -112,10 +114,10 @@ export default function Chat({ messages, available, canWrite, onSend, log = [] }
       <form className="chat-input" onSubmit={submit}>
         <input value={text}
                maxLength={300}
-               placeholder={canWrite ? 'Écrire un message…' : 'Chat fermé pour vous'}
-               disabled={!canWrite || tab === 'sys'}
+               placeholder={tabWritable ? 'Écrire un message…' : 'Lecture seule sur ce canal'}
+               disabled={!tabWritable || tab === 'sys'}
                onChange={(e) => setText(e.target.value)} />
-        <button type="submit" disabled={!canWrite || tab === 'sys' || !text.trim()}>➤</button>
+        <button type="submit" disabled={!tabWritable || tab === 'sys' || !text.trim()}>➤</button>
       </form>
     </div>
   );

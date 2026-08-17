@@ -1036,6 +1036,21 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
 .achievement-row.locked { opacity: .55; }
 .achievement-row .emoji { font-size: 22px; }
 
+/* ── Cause de mort sur l'écran final ── */
+.death-cause {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(212, 120, 90, .85);
+  font-style: italic;
+  line-height: 1.35;
+}
+.death-cause .death-detail {
+  display: block;
+  color: var(--text-dim);
+  font-size: 10.5px;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    TOASTS
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -1705,6 +1720,12 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   background: rgba(5,7,8,.94);
   backdrop-filter: blur(14px);
   box-shadow: 0 8px 30px rgba(0,0,0,.25);
+  /* Le backdrop-filter isole le contexte d'empilement de la topbar : sans
+     z-index ici, le popover Aa (z-110, interne à ce contexte) passait SOUS
+     le contenu central et le rail joueurs dessinés après dans le DOM.
+     30 = au-dessus du plateau (z ≤ 5), sous le drawer (40) et les toasts (50). */
+  position: relative;
+  z-index: 30;
 }
 .game-topbar .game-code {
   color: #e7e5df;

@@ -523,14 +523,23 @@ export default function GamePage() {
   if (!isAlive) chatChannels.push('dead');
   if (isAlive && role?.role === 'MEDIUM' && isNightPhase) chatChannels.push('dead');
   chatChannels.push('day');
-  if (isAlive && role?.team === 'MAFIA' && isNightPhase) {
-    chatChannels.unshift('mafia');
+  if (isAlive && role?.team === 'MAFIA') {
+    chatChannels.unshift('mafia'); // canal famille permanent, jour et nuit
   }
+  // Les morts voient tout : le canal Mafia leur est ouvert en lecture seule.
+  if (!isAlive && !chatChannels.includes('mafia')) chatChannels.push('mafia');
   const canWrite =
     (!isAlive) ||
     (isAlive && !isSilenced && DAY_PHASES.includes(phase)) ||
     (isAlive && role?.team === 'MAFIA' && isNightPhase) ||
     (isAlive && role?.role === 'MEDIUM' && isNightPhase);
+  const writableTabs = [];
+  if (!isAlive) writableTabs.push('dead');
+  else {
+    if (role?.team === 'MAFIA') writableTabs.push('mafia');
+    if (isMediumSeance) writableTabs.push('dead');
+    if (DAY_PHASES.includes(phase)) writableTabs.push('day');
+  }
 
   const correctedNow = now + serverClockOffset.current;
   const remaining = endAt > correctedNow ? Math.ceil((endAt - correctedNow) / 1000) : 0;
@@ -677,7 +686,19 @@ export default function GamePage() {
             {(winner.players ?? []).map((p) => (
               <div key={p.userId} className={`final-player ${p.team === 'MAFIA' ? 'mafia' : 'village'} ${p.isAlive ? '' : 'eliminated'}`}>
                 <span className="final-role-icon">{ROLE_EMOJI[p.role] ?? '❓'}</span>
-                <div><strong>{p.username}</strong><small>{ROLE_LABELS[p.role] ?? p.role}</small></div>
+                <div>
+                  <strong>{p.username}</strong>
+                  <small>{ROLE_LABELS[p.role] ?? p.role}</small>
+                  {/* Chaîne causale de la mort — déviation du bus, sacrifice, verdict… */}
+                  {p.deathRecord && (
+                    <small className="death-cause">
+                      ☠ Tour {p.deathRecord.round} — {p.deathRecord.cause}
+                      {p.deathRecord.details?.map((d, i) => (
+                        <span key={i} className="death-detail">{d}</span>
+                      ))}
+                    </small>
+                  )}
+                </div>
                 <span className="final-status">{p.isAlive ? 'SURVIVANT' : 'ÉLIMINÉ'}</span>
               </div>
             ))}
@@ -958,7 +979,8 @@ export default function GamePage() {
             messages={chatMessages}
             available={chatChannels}
             canWrite={canWrite}
-            onSend={(message) => send('chat:send', { message })}
+          writableTabs={writableTabs}
+            onSend={(message, channel) => send('chat:send', { message, channel })}
             log={gameLog}
           />
         </div>
@@ -1195,14 +1217,24 @@ export default function GamePage() {
                     .map(([id, voters]) => ({
                       p: players.find((x) => x.userId === id),
                       n: voters.length,
+                      voterNames: voters
+                        .map((vid) => players.find((x) => x.userId === vid)?.username)
+                        .filter(Boolean),
                     }))
                     .filter((x) => x.p && x.n > 0)
                     .sort((a, b) => b.n - a.n)
                     .slice(0, 4)
                     .map((x) => (
-                      <div key={x.p.userId} className="roster-row">
-                        <span style={{ flex: 1 }}>{x.p.username}</span>
-                        <span className="vote-badge">{x.n}</span>
+                      <div key={x.p.userId} style={{ marginBottom: 6 }}>
+                        <div className="roster-row">
+                          <span style={{ flex: 1 }}>{x.p.username}</span>
+                          <span className="vote-badge">{x.n}</span>
+                        </div>
+                        <div className="dim"
+                             style={{ fontSize: 11, fontStyle: 'italic',
+                                      paddingLeft: 8, lineHeight: 1.3 }}>
+                          ← {[...new Set(x.voterNames)].join(', ')}
+                        </div>
                       </div>
                     ))}
                   {Object.values(votes).every((v) => v.length === 0) && (
