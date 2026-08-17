@@ -684,6 +684,14 @@ export default function GamePage() {
           {rewards && (
             <div className="reward-summary">
               <div><span>RÉCOMPENSE</span><strong>+{rewards.diamondsEarned} 💎</strong></div>
+              {typeof rewards.eloDelta === 'number' && rewards.eloDelta !== 0 && (
+                <div>
+                  <span>CLASSEMENT</span>
+                  <strong style={{ color: rewards.eloDelta > 0 ? '#57b07c' : '#d05c4c' }}>
+                    {rewards.eloDelta > 0 ? '+' : ''}{rewards.eloDelta} ELO
+                  </strong>
+                </div>
+              )}
               {(rewards.newAchievements ?? []).map((a) => (
                 <div key={a.id} className="reward-achievement">
                   <span>{a.icon}</span>

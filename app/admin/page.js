@@ -41,6 +41,8 @@ export default function AdminPage() {
   const [confirmation, setConfirmation] = useState('');
   const [showPasswords, setShowPasswords] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [games, setGames] = useState(null);
+  const [openGame, setOpenGame] = useState(null); // détail de partie (roster)
   const pageSize = 30;
 
   const loadUsers = useCallback(async (targetPage, query) => {
@@ -72,7 +74,10 @@ export default function AdminPage() {
     }
     setSession(current);
     api.adminMe()
-      .then(() => loadUsers(1, ''))
+      .then(() => {
+        loadUsers(1, '');
+        api.adminListGames(60).then(setGames).catch(() => setGames([]));
+      })
       .catch((requestError) => {
         setAccess(requestError.status === 403 ? 'denied' : 'error');
         setError(requestError.message);
@@ -194,6 +199,7 @@ export default function AdminPage() {
                 <div className="admin-user-identity"><strong>{user.username}</strong><small>{user.email}</small><em>INSCRIT LE {formatDate(user.createdAt).toUpperCase()}</em></div>
                 <div className="admin-user-stat"><small>PARTIES</small><b>{user.gamesPlayed}</b></div>
                 <div className="admin-user-stat"><small>VICTOIRES</small><b>{user.gamesWon}<i>{winRate}%</i></b></div>
+                <div className="admin-user-stat"><small>ELO</small><b>{user.elo ?? 1000}</b></div>
                 <div className="admin-user-stat"><small>DIAMANTS</small><b>{user.diamonds} 💎</b></div>
                 <div className="admin-password-state"><small>DERNIER CHANGEMENT</small><span>{formatDate(user.passwordChangedAt)}</span></div>
                 <button className="admin-password-button" onClick={() => openPasswordModal(user)}><span>🔑</span> MOT DE PASSE</button>
@@ -208,6 +214,70 @@ export default function AdminPage() {
           <div><button disabled={page <= 1 || loading} onClick={() => changePage(page - 1)}>← PRÉCÉDENT</button><b>PAGE {page} / {totalPages}</b><button disabled={page >= totalPages || loading} onClick={() => changePage(page + 1)}>SUIVANT →</button></div>
         </footer>
       </section>
+
+      {/* ── Historique des parties jouées ── */}
+      <section className="card admin-games-card">
+        <header className="admin-users-heading">
+          <div><small>ARCHIVES DE LA VILLE</small><h2>PARTIES JOUÉES</h2><p>Les {games?.length ?? 0} dernières parties archivées, créateur du lobby inclus.</p></div>
+        </header>
+        {games === null && <div className="meta-loading"><span /> Chargement des archives…</div>}
+        {games?.length === 0 && <div className="meta-empty"><strong>AUCUNE PARTIE ARCHIVÉE</strong><p>Les archives sont créées à la fin de chaque partie.</p></div>}
+        {(games ?? []).map((g) => (
+          <article key={g.gameId} className="admin-game-row"
+                   role="button" tabIndex={0}
+                   onClick={() => api.adminGetGame(g.gameId).then(setOpenGame).catch(() => {})}
+                   onKeyDown={(e) => e.key === 'Enter' && api.adminGetGame(g.gameId).then(setOpenGame).catch(() => {})}>
+            <span className={`admin-game-winner ${g.winner === 'MAFIA' ? 'mafia' : 'town'}`}>
+              {g.winner === 'MAFIA' ? '◆ MAFIA' : '✦ VILLE'}
+            </span>
+            <div className="admin-game-main">
+              <strong>{formatDate(g.playedAt)}</strong>
+              <small>
+                Hôte : <b>{g.hostUsername ?? 'inconnu'}</b> · {g.rounds} tour{g.rounds > 1 ? 's' : ''} ·{' '}
+                {g.playerCount} joueurs ({g.humanCount} humain{g.humanCount > 1 ? 's' : ''})
+              </small>
+            </div>
+            <span className="admin-game-open">DÉTAIL →</span>
+          </article>
+        ))}
+      </section>
+
+      {/* ── Modale : roster d'une partie ── */}
+      {openGame && (
+        <div className="admin-password-modal" role="dialog" aria-modal="true"
+             onMouseDown={(event) => event.target === event.currentTarget && setOpenGame(null)}>
+          <div className="admin-game-detail">
+            <header>
+              <div>
+                <small>{formatDate(openGame.playedAt)} · {openGame.rounds} TOURS</small>
+                <h2>{openGame.winner === 'MAFIA' ? 'VICTOIRE DE LA MAFIA' : 'VICTOIRE DE LA VILLE'}</h2>
+              </div>
+              <button type="button" onClick={() => setOpenGame(null)}>✕</button>
+            </header>
+            {openGame.hostUsername && <p className="admin-game-host">👑 Créateur du lobby : <b>{openGame.hostUsername}</b></p>}
+            <div className="admin-game-roster">
+              {(openGame.players ?? []).map((p) => (
+                <div key={p.userId} className={`admin-game-player ${p.team === 'MAFIA' ? 'mafia' : ''} ${p.isAlive ? '' : 'dead'}`}>
+                  <span className="agp-name">
+                    {p.username}
+                    {p.isBot && <em>BOT</em>}
+                    {p.userId === openGame.hostId && <em className="host">HÔTE</em>}
+                  </span>
+                  <span className="agp-role">{p.role}</span>
+                  <span className="agp-status">
+                    {p.isAlive ? 'Survivant' : `✝ ${p.deathRecord?.cause ?? 'Mort'}`}
+                    {typeof p.eloDelta === 'number' && (
+                      <b className={p.eloDelta >= 0 ? 'elo-up' : 'elo-down'}>
+                        {p.eloDelta >= 0 ? '+' : ''}{p.eloDelta} ELO
+                      </b>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="admin-password-modal" role="dialog" aria-modal="true" aria-labelledby="admin-password-title" onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}>

@@ -102,6 +102,9 @@ export default function LeaderboardPage() {
                 {r.saves > 0 ? ` · ${r.saves} soins` : ''}
               </div>
             </div>
+            <span className="cinzel" style={{ color: 'var(--blue, #6aa5d8)', fontSize: 16, marginRight: 14 }}>
+              {r.elo ?? 1000} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>ELO</span>
+            </span>
             <span className="cinzel" style={{ color: 'var(--gold-hi)', fontSize: 16 }}>
               {r.wins} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>victoires</span>
             </span>
