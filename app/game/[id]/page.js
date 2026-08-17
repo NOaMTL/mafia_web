@@ -9,6 +9,7 @@ import { sounds, isMuted, toggleMute, getAudioSettings, setAudioSettings } from 
 import { getAccessibilitySettings, applyAccessibilitySettings, saveAccessibilitySettings } from '@/lib/accessibility';
 import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
+import ConnectionBanner from '@/components/ConnectionBanner';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
@@ -157,8 +158,18 @@ export default function GamePage() {
     const currentAccessibility = getAccessibilitySettings();
     setAccessibility(currentAccessibility);
     applyAccessibilitySettings(currentAccessibility);
-    setVisualTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+    const syncVisualTheme = () => {
+      setVisualTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+    };
+    syncVisualTheme();
+    window.addEventListener('mafia-theme-change', syncVisualTheme);
+    window.addEventListener('storage', syncVisualTheme);
     setAudioSettingsState(getAudioSettings());
+
+    return () => {
+      window.removeEventListener('mafia-theme-change', syncVisualTheme);
+      window.removeEventListener('storage', syncVisualTheme);
+    };
   }, []);
 
   const socketRef = useRef(null);
@@ -609,6 +620,7 @@ export default function GamePage() {
     else delete document.documentElement.dataset.theme;
     try { localStorage.setItem('theme', normalizedTheme); } catch {}
     setVisualTheme(normalizedTheme);
+    window.dispatchEvent(new Event('mafia-theme-change'));
   }
 
   function updateAudio(patch) {
@@ -849,6 +861,7 @@ export default function GamePage() {
 
   return (
     <div className="game-shell">
+      <ConnectionBanner />
       {deathTransition && (
         <DeathTransition
           role={role?.role}

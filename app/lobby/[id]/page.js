@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { getAvatarMap } from '@/lib/avatars';
+import ConnectionBanner from '@/components/ConnectionBanner';
 import BrandMark from '@/components/BrandMark';
 import PageHeading from '@/components/PageHeading';
 import { ROLE_GUIDE, ROLE_DISTRIBUTIONS } from '@/lib/roleGuide';
@@ -120,6 +121,7 @@ export default function LobbyWait() {
 
   return (
     <main className="page meta-page lobby-wait">
+      <ConnectionBanner />
       <div className="ambiance ambiance-home on" />
       <div className="lobby-wait-nav">
         <BrandMark href="/lobby" compact />
