@@ -446,7 +446,15 @@ export default function GamePage() {
       addLog('🏛️', `${d.username} se révèle : MAIRE — son vote compte double.`);
       toast(`🏛️ ${d.username} est le MAIRE — son vote compte désormais double.`);
     });
-    socket.on('game:rewards', 'mayor:revealed',             onRewards);
+    socket.on('mafia:promotion',          (d) => {
+      addLog('🔪', d.isYou
+        ? 'PROMOTION : vous devenez Mafioso — à vous de tuer.'
+        : `${d.username} est promu Mafioso — la famille garde sa lame.`);
+      toast(d.isYou
+        ? '🔪 Le dernier tueur est tombé — VOUS êtes promu Mafioso. La famille compte sur vous.'
+        : `🔪 ${d.username} reprend le flambeau : promu Mafioso.`);
+    });
+    socket.on('game:rewards',             onRewards);
     socket.on('night:detective_result',   onDet);
     socket.on('night:consigliere_result', onCons);
     socket.on('night:tracker_result',      onTracker);
@@ -492,6 +500,7 @@ export default function GamePage() {
       ['game:sync', 'phase:start', 'game:public_state', 'game:role_assigned', 'role:resources',
        'vote:update', 'gazette:published', 'trial:started', 'judgment:voted',
        'sentence:executed', 'sentence:acquitted', 'game:over', 'game:rewards',
+       'mayor:revealed', 'mafia:promotion',
        'night:detective_result', 'night:consigliere_result', 'night:tracker_result', 'night:lookout_result', 'night:investigator_result', 'night:spy_result', 'night:bus_driver_result', 'night:veteran_result', 'night:action_received', 'night:result',
        'night:you_were_saved', 'night:doctor_saved', 'phase:skip_votes_updated',
        'night:blackmailed', 'night:roleblocked', 'night:transported', 'night:visited', 'night:bodyguard_saved', 'night:bodyguard_sacrifice', 'chat:blocked', 'notebook:sync',
