@@ -674,15 +674,34 @@ export default function GamePage() {
   // ═══ Game over ═══
   if (winner) {
     const mafiaWon = winner.winner === 'MAFIA';
+    const finalPlayers = winner.players ?? [];
+    const finalTeams = [
+      {
+        key: 'TOWN',
+        label: 'ALLIANCE TOWN',
+        kicker: mafiaWon ? 'CAMP VAINCU' : 'CAMP VAINQUEUR',
+        players: finalPlayers.filter((player) => player.team !== 'MAFIA'),
+        won: !mafiaWon,
+      },
+      {
+        key: 'MAFIA',
+        label: 'FAMILLE MAFIA',
+        kicker: mafiaWon ? 'CAMP VAINQUEUR' : 'CAMP VAINCU',
+        players: finalPlayers.filter((player) => player.team === 'MAFIA'),
+        won: mafiaWon,
+      },
+    ];
     return (
       <main className={`game-over-screen ${mafiaWon ? 'mafia-victory' : 'village-victory'}`}>
         <div className={`ambiance on ${mafiaWon ? 'ambiance-danger' : 'ambiance-day'}`} />
         <div className="end-vignette" aria-hidden="true" />
         <section className="game-over-content">
-          <div className="page-eyebrow">DOSSIER DE PARTIE CLOS</div>
-          <div className="victory-emblem">{mafiaWon ? '◆' : '✦'}</div>
-          <h1>{mafiaWon ? 'LA MAFIA TRIOMPHE' : 'LA TOWN TRIOMPHE'}</h1>
-          <p>La ville connaît enfin la vérité. Tous les rôles sont révélés.</p>
+          <header className="victory-heading">
+            <div className="page-eyebrow">DOSSIER DE PARTIE CLOS</div>
+            <div className="victory-emblem">{mafiaWon ? '◆' : '✦'}</div>
+            <h1>{mafiaWon ? 'LA MAFIA TRIOMPHE' : 'LA TOWN TRIOMPHE'}</h1>
+            <p>La ville connaît enfin la vérité. Tous les rôles sont révélés.</p>
+          </header>
 
           {rewards && (
             <div className="reward-summary">
@@ -704,25 +723,40 @@ export default function GamePage() {
             </div>
           )}
 
-          <div className="final-roster">
-            {(winner.players ?? []).map((p) => (
-              <div key={p.userId} className={`final-player ${p.team === 'MAFIA' ? 'mafia' : 'village'} ${p.isAlive ? '' : 'eliminated'}`}>
-                <RoleIcon roleKey={p.role} className="final-role-icon" />
-                <div>
-                  <strong>{p.username}</strong>
-                  <small>{ROLE_LABELS[p.role] ?? p.role}</small>
-                  {/* Chaîne causale de la mort — déviation du bus, sacrifice, verdict… */}
-                  {p.deathRecord && (
-                    <small className="death-cause">
-                      ☠ Tour {p.deathRecord.round} — {p.deathRecord.cause}
-                      {p.deathRecord.details?.map((d, i) => (
-                        <span key={i} className="death-detail">{d}</span>
-                      ))}
-                    </small>
-                  )}
+          <div className="final-roster" aria-label="Rôles révélés en fin de partie">
+            {finalTeams.map((team) => team.players.length > 0 && (
+              <section key={team.key} className={`final-team ${team.key.toLowerCase()} ${team.won ? 'winner' : 'defeated'}`}>
+                <header className="final-team-heading">
+                  <div>
+                    <small>{team.kicker}</small>
+                    <h2>{team.label}</h2>
+                  </div>
+                  <span>{team.players.length} JOUEUR{team.players.length > 1 ? 'S' : ''}</span>
+                </header>
+
+                <div className="final-team-list">
+                  {team.players.map((p) => (
+                    <div key={p.userId} className={`final-player ${p.team === 'MAFIA' ? 'mafia' : 'village'} ${p.isAlive ? 'survivor' : 'eliminated'}`}>
+                      <RoleIcon roleKey={p.role} className="final-role-icon" />
+                      <div className="final-player-identity">
+                        <strong>{p.username}</strong>
+                        <small className="final-player-role">{ROLE_LABELS[p.role] ?? p.role}</small>
+                        {/* Chaîne causale de la mort — déviation du bus, sacrifice, verdict… */}
+                        {p.deathRecord && (
+                          <small className="death-cause">
+                            <b>☠ TOUR {p.deathRecord.round}</b>
+                            <span>{p.deathRecord.cause}</span>
+                            {p.deathRecord.details?.map((detail, index) => (
+                              <span key={index} className="death-detail">{detail}</span>
+                            ))}
+                          </small>
+                        )}
+                      </div>
+                      <span className="final-status">{p.isAlive ? 'SURVIVANT' : 'ÉLIMINÉ'}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="final-status">{p.isAlive ? 'SURVIVANT' : 'ÉLIMINÉ'}</span>
-              </div>
+              </section>
             ))}
           </div>
 
@@ -740,7 +774,7 @@ export default function GamePage() {
   if (phase === 'ROLE_REVEAL') {
     return (
       <main className="role-reveal-screen">
-        <div className="ambiance ambiance-night on" />
+        <NightVideoBackdrop disabled={accessibility.reducedMotion || visualTheme === 'light'} />
         <div className="reveal-vignette" aria-hidden="true" />
         <div className="reveal-particles" aria-hidden="true">
           {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
@@ -830,7 +864,7 @@ export default function GamePage() {
     const resolveTheme = ROLE_NIGHT_SCENES[role?.role] ?? ROLE_NIGHT_SCENES.CITIZEN;
     return (
       <main className={`night-resolve-screen night-set-${resolveTheme.set}`} style={{ '--resolve-accent': resolveTheme.accent }}>
-        <div className="ambiance ambiance-night on" />
+        <NightVideoBackdrop disabled={accessibility.reducedMotion || visualTheme === 'light'} />
         <div className="night-resolve-vignette" aria-hidden="true" />
         <div className="night-moon role-resolve-icon" aria-hidden="true"><RoleIcon roleKey={role?.role} className="role-resolve-art" /></div>
         <section className="night-resolve-content">
@@ -1040,6 +1074,9 @@ export default function GamePage() {
 
         {/* Center: table scene */}
         <div className={`table-scene scene-${ambiance || 'night'} phase-${phase.toLowerCase().replaceAll('_', '-')}`} style={{ backgroundImage: `url('${sceneBg}')` }}>
+          {ambiance === 'night' && (
+            <NightVideoBackdrop contained disabled={accessibility.reducedMotion || visualTheme === 'light'} />
+          )}
           <PhaseCenterStage
             phase={phase}
             round={round}
@@ -1367,6 +1404,18 @@ export default function GamePage() {
       )}
 
       <ToastZone toasts={toasts} />
+    </div>
+  );
+}
+
+function NightVideoBackdrop({ disabled = false, contained = false }) {
+  return (
+    <div className={`night-video-backdrop ${contained ? 'contained' : 'fullscreen'} ${disabled ? 'is-static' : ''}`} aria-hidden="true">
+      {!disabled && (
+        <video autoPlay muted loop playsInline preload="auto" poster="/bg/nuit.webp">
+          <source src="/bg/night.mp4" type="video/mp4" />
+        </video>
+      )}
     </div>
   );
 }
@@ -1811,7 +1860,26 @@ function AffectedActionReveal({ data, onDismiss }) {
 
 function ReplayTimeline({ events, players }) {
   const [open, setOpen] = useState(false);
+  const closeButtonRef = useRef(null);
   const names = Object.fromEntries(players.map((p) => [p.userId, p.username]));
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeOnEscape);
+    closeButtonRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [open]);
 
   function describe(event) {
     const actor = names[event.actorId] ?? 'Le système';
@@ -1839,23 +1907,46 @@ function ReplayTimeline({ events, players }) {
   }
 
   return (
-    <section className={`replay-dossier ${open ? 'open' : ''}`}>
-      <button className="replay-toggle" onClick={() => setOpen((value) => !value)}>
-        <span><small>ARCHIVES DÉCLASSIFIÉES</small>REPLAY DE LA PARTIE</span>
-        <b>{events.length} ÉVÉNEMENTS {open ? '−' : '+'}</b>
-      </button>
+    <>
+      <section className="replay-dossier">
+        <button className="replay-toggle" onClick={() => setOpen(true)} aria-haspopup="dialog">
+          <span><small>ARCHIVES DÉCLASSIFIÉES</small>REPLAY DE LA PARTIE</span>
+          <b>{events.length} ÉVÉNEMENTS <i aria-hidden="true">→</i></b>
+        </button>
+      </section>
+
       {open && (
-        <div className="replay-timeline">
-          {events.map((event) => (
-            <div key={event.id} className={`replay-event event-${event.type.toLowerCase()}`}>
-              <span className="replay-round">T{event.round}</span>
-              <i />
-              <div><small>{PHASE_LABELS[event.phase] ?? event.phase}</small><p>{describe(event)}</p></div>
+        <div className="replay-modal-backdrop" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setOpen(false);
+        }}>
+          <section className="replay-modal" role="dialog" aria-modal="true" aria-labelledby="replay-modal-title">
+            <header className="replay-modal-header">
+              <div>
+                <small>ARCHIVES DÉCLASSIFIÉES · DOSSIER COMPLET</small>
+                <h2 id="replay-modal-title">REPLAY DE LA PARTIE</h2>
+                <p>Revivez chaque action, vote et révélation dans l’ordre où ils se sont produits.</p>
+              </div>
+              <div className="replay-modal-meta">
+                <span><strong>{events.length}</strong> ÉVÉNEMENTS</span>
+                <span><strong>{Math.max(0, ...events.map((event) => Number(event.round) || 0))}</strong> TOURS</span>
+              </div>
+              <button ref={closeButtonRef} type="button" className="replay-modal-close" aria-label="Fermer le replay" onClick={() => setOpen(false)}>×</button>
+            </header>
+
+            <div className="replay-timeline">
+              {events.length === 0 && <p className="replay-empty">Aucun événement n’a été archivé pour cette partie.</p>}
+              {events.map((event) => (
+                <article key={event.id} className={`replay-event event-${event.type.toLowerCase()}`}>
+                  <span className="replay-round">TOUR {event.round}</span>
+                  <i />
+                  <div><small>{PHASE_LABELS[event.phase] ?? event.phase}</small><p>{describe(event)}</p></div>
+                </article>
+              ))}
             </div>
-          ))}
+          </section>
         </div>
       )}
-    </section>
+    </>
   );
 }
 
