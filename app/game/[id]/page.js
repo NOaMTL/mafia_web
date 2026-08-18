@@ -37,6 +37,16 @@ const ROLE_LABELS = {
   MEDIUM: 'Médium',
 };
 
+// Cartons de transition affichés à chaque bascule de phase.
+const PHASE_SLATES = {
+  NIGHT:           { icon: '🌙', title: 'LA NUIT TOMBE',       sub: 'La ville ferme les yeux' },
+  MORNING_GAZETTE: { icon: '📰', title: 'LE VILLAGE S’ÉVEILLE', sub: 'La gazette du matin' },
+  DAY_DISCUSSION:  { icon: '💬', title: 'LE DÉBAT S’OUVRE',     sub: 'Qui cache son jeu ?' },
+  DAY_VOTE:        { icon: '🗳️', title: 'L’HEURE DU VOTE',      sub: 'Désignez un suspect' },
+  TRIAL:           { icon: '⚖️', title: 'LE PROCÈS',            sub: 'L’accusé se défend' },
+  JUDGMENT:        { icon: '⚖️', title: 'LE JUGEMENT',          sub: 'Coupable ou innocent ?' },
+};
+
 const NIGHT_PROMPTS = {
   MAFIOSO:     'Choisissez la victime de la famille.',
   GODFATHER:   'Ordonnez l\'assassinat — votre voix compte double.',
@@ -135,6 +145,12 @@ export default function GamePage() {
   // Mobile : section active (table / chat / joueurs) — pilotée par les
   // onglets bas et resynchronisée sur les phases clés.
   const [mobileTab, setMobileTab] = useState('table');
+  const [phaseSlate, setPhaseSlate] = useState(null);     // carton de transition
+  const [verdictSlate, setVerdictSlate] = useState(null); // mise en scène du verdict
+  const [dayFeed, setDayFeed] = useState([]);             // fil des événements
+  const [coachSeen, setCoachSeen] = useState(null);       // onboarding (null = pas chargé)
+  const phaseSlateTimer = useRef(null);
+  const verdictTimers = useRef([]);
   const [topMenuOpen, setTopMenuOpen] = useState(false); // menu ☰ mobile
   const [chatMessages, setChatMessages] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -187,6 +203,19 @@ export default function GamePage() {
   useEffect(() => { roundRef.current = round; }, [round]);
   useEffect(() => { roleRef.current = role; }, [role]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Onboarding : marques déjà vues (persisté).
+  useEffect(() => {
+    try { setCoachSeen(JSON.parse(localStorage.getItem('mafia_coach') ?? '{}')); }
+    catch { setCoachSeen({}); }
+  }, []);
+  const dismissCoach = (key) => {
+    setCoachSeen((prev) => {
+      const next = { ...(prev ?? {}), [key]: true };
+      try { localStorage.setItem('mafia_coach', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   // Mobile : suivre le rythme de la partie — la nuit et le matin se vivent
   // sur la table, les votes et jugements dans le panneau joueurs.
@@ -266,6 +295,14 @@ export default function GamePage() {
     };
     const onPhase = (d) => {
       syncServerClock(d);
+      const previousPhase = phaseRef.current;
+      // Carton cinématique sur une vraie bascule (pas au premier sync).
+      if (previousPhase && previousPhase !== d.phase && PHASE_SLATES[d.phase]) {
+        setPhaseSlate({ id: Date.now(), ...PHASE_SLATES[d.phase], phase: d.phase });
+        clearTimeout(phaseSlateTimer.current);
+        phaseSlateTimer.current = setTimeout(() => setPhaseSlate(null), 1900);
+        sounds.whoosh();
+      }
       setPhase(d.phase);
       phaseRef.current = d.phase;
       if (d.round) setRound(d.round);
@@ -299,25 +336,46 @@ export default function GamePage() {
       const tally = d.tally ?? {};
       setVotes(tally);
     };
+    const pushFeed = (icon, text) => {
+      setDayFeed((prev) => [...prev.slice(-9), { id: Date.now() + Math.random(), icon, text, round: roundRef.current }]);
+    };
     const onGazette  = (d) => {
       const entries = d.entries ?? [];
       setGazette((prev) => {
         // Log only newly arrived entries.
         for (const e of entries.slice(prev.length)) {
-          if (e.noElimination) addLog('🕊️', 'Nuit calme — personne n\'est mort.');
-          else addLog('☠️', `${e.eliminatedUsername} éliminé — ${e.eliminatedRole}`);
+          if (e.noElimination) { addLog('🕊️', 'Nuit calme — personne n\'est mort.'); pushFeed('🕊️', 'Nuit calme'); }
+          else { addLog('☠️', `${e.eliminatedUsername} éliminé — ${e.eliminatedRole}`); pushFeed('☠️', `${e.eliminatedUsername} mort`); }
         }
         return entries;
       });
     };
-    const onTrial    = (d) => { setTrial(d); addLog('⚖️', `${d.accusedUsername} envoyé au procès.`); };
+    const onTrial    = (d) => { setTrial(d); addLog('⚖️', `${d.accusedUsername} envoyé au procès.`); pushFeed('⚖️', `${d.accusedUsername} accusé`); };
     const onJudgVotes = (d) => setJudgment(d);
+    const playVerdict = (result) => {
+      verdictTimers.current.forEach(clearTimeout);
+      setVerdictSlate({ stage: 'suspense' });
+      verdictTimers.current = [
+        setTimeout(() => {
+          setVerdictSlate({ stage: 'result', ...result });
+          if (result.type === 'executed') sounds.gavel(); else sounds.spirit();
+        }, 1150),
+        setTimeout(() => setVerdictSlate(null), 4200),
+      ];
+    };
     const onExec     = (d) => {
       setSentence({ type: 'executed', username: d.username, role: d.role, will: d.will });
       addLog('🔨', `${d.username} exécuté — ${d.role}`);
+      pushFeed('🔨', `${d.username} exécuté`);
+      playVerdict({ type: 'executed', username: d.username, role: d.role });
       sounds.death();
     };
-    const onAcquit   = ()  => { setSentence({ type: 'acquitted' }); addLog('🕊️', 'Accusé acquitté.'); };
+    const onAcquit   = ()  => {
+      setSentence({ type: 'acquitted' });
+      addLog('🕊️', 'Accusé acquitté.');
+      pushFeed('🕊️', 'Acquitté');
+      playVerdict({ type: 'acquitted' });
+    };
     const onOver     = (d) => {
       setWinner(d);
       const meP = d.players?.find((p) => p.userId === getSession()?.userId);
@@ -447,6 +505,7 @@ export default function GamePage() {
     socket.on('mayor:revealed',           (d) => {
       setMayorRevealedBy(d.username);
       addLog('🏛️', `${d.username} se révèle : MAIRE — son vote compte double.`);
+      pushFeed('🏛️', `${d.username} = Maire`);
       toast(`🏛️ ${d.username} est le MAIRE — son vote compte désormais double.`);
     });
     socket.on('mafia:promotion',          (d) => {
@@ -1057,6 +1116,49 @@ export default function GamePage() {
         </div>
       </div>
 
+      {/* ── Carton de transition de phase ── */}
+      {phaseSlate && !accessibility.reducedMotion && (
+        <div key={phaseSlate.id} className={`phase-slate tone-${phaseSlate.phase === 'NIGHT' ? 'night' : 'day'}`} aria-hidden="true">
+          <span className="phase-slate-icon">{phaseSlate.icon}</span>
+          <strong>{phaseSlate.title}</strong>
+          <em>{phaseSlate.sub}</em>
+        </div>
+      )}
+
+      {/* ── Mise en scène du verdict ── */}
+      {verdictSlate && (
+        <div className={`verdict-slate ${verdictSlate.stage}`} aria-live="assertive">
+          {verdictSlate.stage === 'suspense' ? (
+            <strong className="verdict-suspense">LE VERDICT…</strong>
+          ) : verdictSlate.type === 'executed' ? (
+            <>
+              <span className="verdict-icon">🔨</span>
+              <strong className="verdict-guilty">COUPABLE</strong>
+              <em>{verdictSlate.username} — {ROLE_LABELS[verdictSlate.role] ?? verdictSlate.role}</em>
+            </>
+          ) : (
+            <>
+              <span className="verdict-icon">🕊️</span>
+              <strong className="verdict-innocent">ACQUITTÉ</strong>
+              <em>Le doute a profité à l’accusé</em>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Fil des événements du jour ── */}
+      {dayFeed.length > 0 && (
+        <button type="button" className="day-feed" title="Ouvrir le journal complet"
+                onClick={() => setPanelOpen(true)}>
+          {dayFeed.slice(-6).map((ev) => (
+            <span key={ev.id} className="day-feed-chip">
+              <i>{ev.icon}</i> {ev.text}
+            </span>
+          ))}
+          <span className="day-feed-more">JOURNAL →</span>
+        </button>
+      )}
+
       {/* ── Main : chat | table | rail ── */}
       <div className={`game-main mobile-${mobileTab}`}>
         {/* Left: chat */}
@@ -1300,6 +1402,9 @@ export default function GamePage() {
                       <div className="num">{judgment.innocent}</div>
                       <div className="lbl">INNOCENT</div>
                     </div>
+                    <div className="judgment-gauge" aria-hidden="true">
+                      <div className="gauge-guilty" style={{ width: `${(judgment.guilty + judgment.innocent) > 0 ? (judgment.guilty / (judgment.guilty + judgment.innocent)) * 100 : 50}%` }} />
+                    </div>
                   </div>
                   {judgment.abstain > 0 && (
                     <div className="dim" style={{ textAlign: 'center', fontSize: 11 }}>
@@ -1401,6 +1506,26 @@ export default function GamePage() {
           teammates={mafiaTeammates}
           onClose={() => setRoleCardOpen(false)}
         />
+      )}
+
+      {/* ── Onboarding première partie : coach marks une seule fois ── */}
+      {coachSeen && !coachSeen.night && phase === 'NIGHT' && isAlive && role?.role && (
+        <div className="coach-mark coach-night">
+          <p>🌙 Première nuit : choisis ta cible dans la carte centrale — ton action se valide dès le clic.</p>
+          <button onClick={() => dismissCoach('night')}>COMPRIS</button>
+        </div>
+      )}
+      {coachSeen && coachSeen.night && !coachSeen.vote && phase === 'DAY_VOTE' && isAlive && (
+        <div className="coach-mark coach-vote">
+          <p>🗳️ Clique un joueur (table ou panneau VOTATION) pour l’envoyer au procès. Tu peux changer d’avis tant que le vote est ouvert.</p>
+          <button onClick={() => dismissCoach('vote')}>COMPRIS</button>
+        </div>
+      )}
+      {coachSeen && coachSeen.night && !coachSeen.dossier && phase === 'DAY_DISCUSSION' && (
+        <div className="coach-mark coach-dossier">
+          <p>🕵️ Ton carnet, ton testament et le journal complet vivent dans le DOSSIER D’ENQUÊTE.</p>
+          <button onClick={() => dismissCoach('dossier')}>COMPRIS</button>
+        </div>
       )}
 
       <ToastZone toasts={toasts} />

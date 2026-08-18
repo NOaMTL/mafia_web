@@ -113,11 +113,11 @@ body::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg,
+  /* background: linear-gradient(180deg,
     rgba(6, 6, 10, 0.62) 0%,
     rgba(6, 6, 10, 0.70) 35%,
     rgba(6, 6, 10, 0.84) 70%,
-    rgba(6, 6, 10, 0.95) 100%);
+    rgba(6, 6, 10, 0.95) 100%); */
 }
 .ambiance-night  { background-image: url('/bg/nuit.webp'); }
 .ambiance-day    { background-image: url('/bg/jour.webp'); }
@@ -2190,9 +2190,9 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   padding: 24px 34px 72px;
 }
 .meta-page > .ambiance::after {
-  background:
+ /*  background:
     linear-gradient(180deg, rgba(3,5,6,.7), rgba(3,5,6,.91) 42%, #050607 100%),
-    linear-gradient(90deg, rgba(3,5,6,.95), rgba(3,5,6,.38));
+    linear-gradient(90deg, rgba(3,5,6,.95), rgba(3,5,6,.38)); */
 }
 .meta-page .nav-header {
   min-height: 58px;
@@ -9239,3 +9239,169 @@ html[data-theme="light"] .user-menu-item small { color: rgba(48,34,14,.58); }
 }
 /* La barre "CHOISIS TA CIBLE" du bas est redondante avec la carte : masquée. */
 .table-scene.phase-night .action-main { display: none; }
+
+/* ═══ UI/UX v3 : cartons de phase, verdict, fil du jour, onboarding ═══════ */
+
+/* ── Carton de transition de phase ── */
+.phase-slate {
+  position: fixed;
+  inset: 0;
+  z-index: 340;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(3, 5, 9, .62), rgba(2, 3, 6, .88));
+  animation: slateInOut 1.9s ease forwards;
+}
+.phase-slate-icon { font-size: 46px; animation: slateIcon 1.9s ease; }
+.phase-slate strong {
+  font-family: var(--font-cinzel, serif);
+  font-size: clamp(30px, 5.5vw, 52px);
+  letter-spacing: 8px;
+  color: #f2e5c8;
+  text-shadow: 0 0 40px rgba(210, 167, 82, .35);
+  animation: slateText 1.9s ease;
+}
+.phase-slate.tone-night strong { color: #cfd6ee; text-shadow: 0 0 40px rgba(110, 130, 220, .4); }
+.phase-slate em {
+  font-style: normal;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, .55);
+}
+@keyframes slateInOut {
+  0% { opacity: 0; } 12% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; }
+}
+@keyframes slateText {
+  0% { transform: scale(.92); letter-spacing: 14px; opacity: 0; }
+  22% { transform: scale(1); letter-spacing: 8px; opacity: 1; }
+  100% { transform: scale(1.02); }
+}
+@keyframes slateIcon { 0% { transform: translateY(10px); opacity: 0; } 25% { transform: none; opacity: 1; } }
+
+/* ── Mise en scène du verdict ── */
+.verdict-slate {
+  position: fixed;
+  inset: 0;
+  z-index: 345;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  background: rgba(2, 3, 6, .82);
+  animation: fadeIn .3s ease;
+}
+.verdict-suspense {
+  font-family: var(--font-cinzel, serif);
+  font-size: clamp(24px, 4vw, 38px);
+  letter-spacing: 10px;
+  color: rgba(255, 255, 255, .75);
+  animation: suspensePulse 1.2s ease infinite;
+}
+@keyframes suspensePulse { 50% { opacity: .35; } }
+.verdict-icon { font-size: 52px; animation: verdictDrop .4s cubic-bezier(.2, 1.6, .4, 1); }
+.verdict-slate strong.verdict-guilty,
+.verdict-slate strong.verdict-innocent {
+  font-family: var(--font-cinzel, serif);
+  font-size: clamp(40px, 8vw, 74px);
+  letter-spacing: 10px;
+  animation: verdictDrop .4s cubic-bezier(.2, 1.6, .4, 1);
+}
+.verdict-guilty { color: #e05b4b; text-shadow: 0 0 50px rgba(224, 91, 75, .5); }
+.verdict-innocent { color: #7cc79b; text-shadow: 0 0 50px rgba(124, 199, 155, .45); }
+.verdict-slate em { font-style: normal; font-size: 15px; letter-spacing: 2px; color: rgba(255, 255, 255, .65); }
+@keyframes verdictDrop { 0% { transform: scale(1.7); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ── Fil des événements du jour ── */
+.day-feed {
+  position: relative;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 6px;
+  padding: 6px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 10px;
+  background: rgba(5, 7, 10, .78);
+  cursor: pointer;
+  text-align: left;
+}
+.day-feed::-webkit-scrollbar { display: none; }
+.day-feed-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 20px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .78);
+  background: rgba(255, 255, 255, .03);
+  white-space: nowrap;
+}
+.day-feed-chip i { font-style: normal; }
+.day-feed-more {
+  flex: none;
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--gold, #d2a752);
+}
+
+/* ── Jauge de jugement animée ── */
+.judgment-gauge {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(124, 199, 155, .3);
+}
+.judgment-gauge .gauge-guilty {
+  height: 100%;
+  background: linear-gradient(90deg, #b23a2c, #e05b4b);
+  transition: width .6s cubic-bezier(.3, 1, .4, 1);
+}
+
+/* ── Coach marks (onboarding) ── */
+.coach-mark {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 330;
+  width: min(430px, calc(100vw - 30px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid rgba(210, 167, 82, .55);
+  border-radius: 12px;
+  background: rgba(6, 8, 12, .96);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .5);
+  animation: coachIn .35s ease;
+}
+.coach-mark p { margin: 0; flex: 1; font-size: 13.5px; line-height: 1.45; color: #f0e6d2; }
+.coach-mark button {
+  flex: none;
+  padding: 8px 14px;
+  border: 1px solid var(--gold, #d2a752);
+  border-radius: 8px;
+  background: rgba(210, 167, 82, .14);
+  color: #e9bc5d;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+@keyframes coachIn { from { transform: translate(-50%, 12px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
