@@ -129,12 +129,13 @@ export default function Lab3dPage() {
         new B.Vector3(0, 1.38, 0.55), scene,
       );
       camera.attachControl(canvas, true);
-      camera.lowerRadiusLimit = 11.2;
-      camera.upperRadiusLimit = 16.8;
-      camera.lowerBetaLimit = 1.02;
-      camera.upperBetaLimit = 1.27;
-      camera.lowerAlphaLimit = -Math.PI / 2 - 0.23;
-      camera.upperAlphaLimit = -Math.PI / 2 + 0.23;
+      camera.lowerRadiusLimit = 5.5;
+      camera.upperRadiusLimit = 18;
+      camera.lowerBetaLimit = 0.55;
+      camera.upperBetaLimit = 1.38;
+      // Rotation 360° libre autour de la table.
+      camera.lowerAlphaLimit = null;
+      camera.upperAlphaLimit = null;
       camera.wheelDeltaPercentage = 0.012;
       camera.panningSensibility = 0;
       camera.inertia = 0.82;
@@ -266,6 +267,8 @@ export default function Lab3dPage() {
       makeWall('wall-back', 26, new B.Vector3(0, 0, 8.2), Math.PI);
       makeWall('wall-left', 18, new B.Vector3(-12.4, 0, 1.5), -Math.PI / 2);
       makeWall('wall-right', 18, new B.Vector3(12.4, 0, 1.5), Math.PI / 2);
+      // 4e mur : la rotation 360° ne doit plus donner sur le vide.
+      makeWall('wall-front', 26, new B.Vector3(0, 0, -10.4), 0);
 
       // ── Plafond à poutres ──
       const ceiling = B.MeshBuilder.CreatePlane('ceiling', { width: 26, height: 22 }, scene);
@@ -512,49 +515,49 @@ export default function Lab3dPage() {
       });
 
       const tableRoot = new B.TransformNode('table-root', scene);
-      const tableTop = addShadow(B.MeshBuilder.CreateCylinder('table-top', { diameter: 8.45, height: 0.34, tessellation: 96 }, scene));
+      const tableTop = addShadow(B.MeshBuilder.CreateCylinder('table-top', { diameter: 6.7, height: 0.32, tessellation: 96 }, scene));
       tableTop.parent = tableRoot;
-      tableTop.position.y = 1.04;
+      tableTop.position.y = 1.29;
       tableTop.scaling.z = 0.78;
       const tableMaterial = makeMaterial('walnut-table', '#593319', 0.28);
       tableMaterial.specularPower = 120;
       tableTop.material = tableMaterial;
 
-      const lowerLip = B.MeshBuilder.CreateCylinder('table-lower-lip', { diameter: 8.72, height: 0.12, tessellation: 96 }, scene);
+      const lowerLip = B.MeshBuilder.CreateCylinder('table-lower-lip', { diameter: 6.95, height: 0.12, tessellation: 96 }, scene);
       lowerLip.parent = tableRoot;
-      lowerLip.position.y = 0.91;
+      lowerLip.position.y = 1.16;
       lowerLip.scaling.z = 0.78;
       lowerLip.material = makeMaterial('dark-walnut', '#2b170c', 0.18);
 
-      const leather = B.MeshBuilder.CreateCylinder('leather-inlay', { diameter: 6.72, height: 0.025, tessellation: 96 }, scene);
+      const leather = B.MeshBuilder.CreateCylinder('leather-inlay', { diameter: 5.2, height: 0.025, tessellation: 96 }, scene);
       leather.parent = tableRoot;
-      leather.position.y = 1.224;
+      leather.position.y = 1.474;
       leather.scaling.z = 0.77;
       leather.material = makeMaterial('leather', '#211611', 0.09);
 
-      const brassRing = B.MeshBuilder.CreateTorus('brass-inlay', { diameter: 6.9, thickness: 0.035, tessellation: 96 }, scene);
+      const brassRing = B.MeshBuilder.CreateTorus('brass-inlay', { diameter: 5.4, thickness: 0.035, tessellation: 96 }, scene);
       brassRing.parent = tableRoot;
-      brassRing.position.y = 1.246;
+      brassRing.position.y = 1.496;
       brassRing.scaling.z = 0.77;
       brassRing.material = makeMaterial('aged-brass', '#a0702d', 0.52, '#271504');
 
       const pedestal = addShadow(B.MeshBuilder.CreateCylinder('pedestal', {
-        diameterTop: 2.2, diameterBottom: 3.25, height: 0.94, tessellation: 48,
+        diameterTop: 1.8, diameterBottom: 2.7, height: 1.19, tessellation: 48,
       }, scene));
       pedestal.parent = tableRoot;
-      pedestal.position.y = 0.47;
+      pedestal.position.y = 0.6;
       pedestal.scaling.z = 0.74;
       pedestal.material = makeMaterial('pedestal-wood', '#2b190e', 0.16);
 
       const emblem = B.MeshBuilder.CreateCylinder('emblem', { diameter: 1.55, height: 0.035, tessellation: 64 }, scene);
       emblem.parent = tableRoot;
-      emblem.position.y = 1.254;
+      emblem.position.y = 1.504;
       emblem.scaling.z = 0.77;
       emblem.material = makeMaterial('emblem', '#69451e', 0.35, '#251606');
 
       const logoMark = B.MeshBuilder.CreatePlane('table-logo', { size: 1.04 }, scene);
       logoMark.parent = tableRoot;
-      logoMark.position.set(0, 1.277, 0);
+      logoMark.position.set(0, 1.527, 0);
       logoMark.rotation.x = Math.PI / 2;
       logoMark.scaling.y = 0.77;
       const logoMaterial = new B.StandardMaterial('table-logo-material', scene);
@@ -568,11 +571,82 @@ export default function Lab3dPage() {
       logoMark.material = logoMaterial;
 
       const gui = B.GUI.AdvancedDynamicTexture.CreateFullscreenUI('player-ui', true, scene);
-      // Les modèles GLB téléchargés (pose figée ou T-pose impossible à asseoir
-      // proprement sans itération visuelle) sont abandonnés au profit du
-      // personnage low-poly MAISON : pose assise réelle, jambes comprises,
-      // entièrement contrôlé en code.
-      const characterAssets = null;
+
+      // ── Personnages Quaternius (CC0) : riggés, squelette type UE.
+      // Pas d'animation fournie → la pose ASSISE est composée en code, os
+      // par os (SEATED_POSE ci-dessous, ajustable à la capture d'écran).
+      const QUATERNIUS_ROOT = '/models/Base%20Characters/Godot%20-%20UE/';
+      const TEX_ROOT = '/models/Base%20Characters/Textures/';
+      const HAIR_ROOT = '/models/Hairstyles/Origin%20at%200/glTF%20(Godot)/';
+      const OUTFIT_ROOT = '/models/outfit/outfits/Exports/glTF%20(Godot-Unreal)/Outfits/';
+      const SKIN_TEXTURES = {
+        male:   { light: `${TEX_ROOT}T_Superhero_Male_Ligh.png`, dark: `${QUATERNIUS_ROOT}T_Superhero_Male_Dark.png` },
+        female: { light: `${TEX_ROOT}T_Superhero_Female_Light_BaseColor.png`, dark: `${QUATERNIUS_ROOT}T_Superhero_Female_Dark_BaseColor.png` },
+      };
+      const skinTextureCache = new Map();
+
+      let characterAssets = null;
+      try {
+        if (!disposed) setStatus('Installation des joueurs autour de la table…');
+        const containers = {};
+        const loadContainer = async (key, rootUrl, file) => {
+          containers[key] = await B.SceneLoader.LoadAssetContainerAsync(rootUrl, file, scene);
+        };
+        await Promise.all([
+          loadContainer('body-male', QUATERNIUS_ROOT, 'Superhero_Male_FullBody.gltf'),
+          loadContainer('body-female', QUATERNIUS_ROOT, 'Superhero_Female_FullBody.gltf'),
+          loadContainer('Eyebrows_Regular', HAIR_ROOT, 'Eyebrows_Regular.gltf'),
+          loadContainer('Eyebrows_Female', HAIR_ROOT, 'Eyebrows_Female.gltf'),
+          loadContainer('Hair_Beard', HAIR_ROOT, 'Hair_Beard.gltf'),
+          loadContainer('Hair_Buzzed', HAIR_ROOT, 'Hair_Buzzed.gltf'),
+          loadContainer('Hair_SimpleParted', HAIR_ROOT, 'Hair_SimpleParted.gltf'),
+          loadContainer('Hair_Long', HAIR_ROOT, 'Hair_Long.gltf'),
+          loadContainer('Hair_Buns', HAIR_ROOT, 'Hair_Buns.gltf'),
+          loadContainer('Hair_BuzzedFemale', HAIR_ROOT, 'Hair_BuzzedFemale.gltf'),
+          loadContainer('outfit-male-Peasant', OUTFIT_ROOT, 'Male_Peasant.gltf'),
+          loadContainer('outfit-male-Ranger', OUTFIT_ROOT, 'Male_Ranger.gltf'),
+          loadContainer('outfit-female-Peasant', OUTFIT_ROOT, 'Female_Peasant.gltf'),
+          loadContainer('outfit-female-Ranger', OUTFIT_ROOT, 'Female_Ranger.gltf'),
+        ]);
+        characterAssets = containers;
+        if (disposed) { Object.values(containers).forEach((c) => c.dispose()); return; }
+      } catch (error) {
+        console.warn('Personnages Quaternius indisponibles — modèle maison utilisé.', error);
+        characterAssets = null;
+      }
+
+      // Angles de la pose assise (radians), par os. Symétrie gauche/droite
+      // automatique. À AJUSTER visuellement : c'est le seul endroit à toucher.
+      const SEATED_POSE = {
+        thigh:    { x: -1.5, mirrorZ: false }, // cuisses à l'horizontale
+        calf:     { x: 1.42, mirrorZ: false }, // genoux pliés, tibias verticaux
+        foot:     { x: 0.1,  mirrorZ: false },
+        spine_01: { x: 0.1,  mirrorZ: false }, // léger penché vers la table
+        spine_02: { x: 0.06, mirrorZ: false },
+        upperarm: { x: 0.35, z: -1.05, mirrorZ: true }, // bras descendus le long du corps
+        lowerarm: { x: 0.35, mirrorZ: false },        // avant-bras posés vers la table
+      };
+      const applySeatedPose = (avatarRoot) => {
+        // IMPORTANT : corps ET tenue ont chacun leur squelette (mêmes noms
+        // d'os). Il faut roter TOUS les homonymes, sinon l'un des deux reste
+        // en T-pose debout pendant que l'autre s'assoit.
+        const nodes = avatarRoot.getChildTransformNodes(false);
+        const matchBones = (suffix) => nodes.filter((n) => n.name.endsWith(suffix));
+        for (const [bone, conf] of Object.entries(SEATED_POSE)) {
+          if (bone.startsWith('spine')) {
+            for (const node of matchBones(bone)) {
+              if (conf.x) node.rotate(B.Axis.X, conf.x, B.Space.LOCAL);
+            }
+            continue;
+          }
+          for (const side of ['_l', '_r']) {
+            for (const node of matchBones(`${bone}${side}`)) {
+              if (conf.x) node.rotate(B.Axis.X, conf.x, B.Space.LOCAL);
+              if (conf.z) node.rotate(B.Axis.Z, conf.mirrorZ && side === '_r' ? -conf.z : conf.z, B.Space.LOCAL);
+            }
+          }
+        }
+      };
 
       const skinMaterials = new Map();
       const skinMaterial = (hex) => {
@@ -583,8 +657,26 @@ export default function Lab3dPage() {
       const createPlayer = (player, index) => {
         const angle = (index / PLAYERS.length) * Math.PI * 2 - Math.PI / 2;
         const root = new B.TransformNode(`player-${index}`, scene);
-        root.position.set(Math.cos(angle) * 4.92, 0, Math.sin(angle) * 3.88);
+        root.position.set(Math.cos(angle) * 3.85, 0, Math.sin(angle) * 3.05);
         root.lookAt(new B.Vector3(0, 0.98, 0));
+
+        // Générateur pseudo-aléatoire DÉTERMINISTE par joueur : chaque
+        // silhouette a sa posture propre, stable d'un rendu à l'autre.
+        const rnd = (n) => {
+          const v = Math.sin(index * 127.1 + n * 311.7) * 43758.5453;
+          return v - Math.floor(v);
+        };
+        // Légère rotation du corps : personne n'est assis parfaitement droit.
+        // (lookAt écrit en quaternion OU en Euler selon l'état du nœud.)
+        const postureYaw = (rnd(1) - 0.5) * 0.18;
+        if (root.rotationQuaternion) {
+          root.rotationQuaternion = root.rotationQuaternion.multiply(
+            B.Quaternion.RotationYawPitchRoll(postureYaw, 0, 0),
+          );
+        } else {
+          root.rotation.y += postureYaw;
+        }
+        const isFemale = ['bob', 'wave', 'bun'].includes(player.style);
 
         const suitMaterial = makeMaterial(`suit-${index}`, player.suit, 0.1);
         const accentMaterial = makeMaterial(`accent-${index}`, player.accent, 0.22);
@@ -622,10 +714,14 @@ export default function Lab3dPage() {
           finial.material = accentMaterial;
         }
 
-        const hips = addShadow(B.MeshBuilder.CreateSphere(`hips-${index}`, { diameter: 0.74, segments: 20 }, scene));
+        // Style low-poly assumé : volumes FACETTÉS (flat shading) plutôt
+        // que primitives lisses — fini l'effet "tubes".
+        const lowpoly = (mesh) => { mesh.convertToFlatShadedMesh(); return mesh; };
+
+        const hips = addShadow(lowpoly(B.MeshBuilder.CreateSphere(`hips-${index}`, { diameter: 0.76, segments: 6 }, scene)));
         hips.parent = root;
         hips.position.set(0, 0.92, -0.02);
-        hips.scaling.set(1, 0.72, 0.8);
+        hips.scaling.set(1.04, 0.66, 0.84);
         hips.material = suitMaterial;
 
         // ── Jambes ASSISES : cuisses à l'horizontale vers la table,
@@ -634,13 +730,13 @@ export default function Lab3dPage() {
         const trouserMaterial = makeMaterial(`trousers-${index}`, player.suit, 0.07);
         const shoeMaterial = makeMaterial('shoes', '#181009', 0.3);
         for (const side of [-1, 1]) {
-          const thigh = addShadow(B.MeshBuilder.CreateCapsule(`thigh-${index}-${side}`, { radius: 0.13, height: 0.62, tessellation: 16 }, scene));
+          const thigh = addShadow(lowpoly(B.MeshBuilder.CreateCylinder(`thigh-${index}-${side}`, { diameterTop: 0.2, diameterBottom: 0.27, height: 0.62, tessellation: 7 }, scene)));
           thigh.parent = root;
           thigh.position.set(side * 0.2, 0.82, 0.2);
           thigh.rotation.x = Math.PI / 2 - 0.08; // quasi horizontale, genou léger vers le haut
           thigh.material = trouserMaterial;
 
-          const calf = addShadow(B.MeshBuilder.CreateCapsule(`calf-${index}-${side}`, { radius: 0.1, height: 0.68, tessellation: 16 }, scene));
+          const calf = addShadow(lowpoly(B.MeshBuilder.CreateCylinder(`calf-${index}-${side}`, { diameterTop: 0.19, diameterBottom: 0.14, height: 0.68, tessellation: 7 }, scene)));
           calf.parent = root;
           calf.position.set(side * 0.2, 0.42, 0.5);
           calf.rotation.x = 0.12; // presque verticale, léger recul du pied
@@ -652,12 +748,29 @@ export default function Lab3dPage() {
           shoe.material = shoeMaterial;
         }
 
-        const torso = addShadow(B.MeshBuilder.CreateCylinder(`torso-${index}`, {
-          diameterTop: 0.74, diameterBottom: 0.86, height: 1.0, tessellation: 32,
-        }, scene));
+        // Profil de veston cintré : hanches larges (veste évasée), taille
+        // marquée, poitrine bombée, épaules carrées, amorce de col.
+        const torsoProfile = [
+          new B.Vector3(0.42, 0, 0),
+          new B.Vector3(0.44, 0.1, 0),
+          new B.Vector3(0.37, 0.28, 0),
+          new B.Vector3(0.315, 0.46, 0),
+          new B.Vector3(0.35, 0.64, 0),
+          new B.Vector3(0.40, 0.82, 0),
+          new B.Vector3(0.42, 0.92, 0),
+          new B.Vector3(0.34, 1.0, 0),
+          new B.Vector3(0.16, 1.06, 0),
+          new B.Vector3(0.12, 1.09, 0),
+        ];
+        const torso = addShadow(lowpoly(B.MeshBuilder.CreateLathe(`torso-${index}`, {
+          shape: torsoProfile, tessellation: 9, cap: B.Mesh.CAP_ALL,
+        }, scene)));
         torso.parent = root;
-        torso.position.set(0, 1.42, 0.035);
-        torso.rotation.x = 0.055;
+        torso.position.set(0, 0.9, 0.035);
+        torso.scaling.z = 0.78;
+        // Penché en avant (impliqué) ou en retrait (méfiant) selon le joueur.
+        torso.rotation.x = 0.02 + rnd(2) * 0.09;
+        if (isFemale) torso.scaling.x = 0.86;
         torso.material = suitMaterial;
 
         const shirt = B.MeshBuilder.CreateBox(`shirt-${index}`, { width: 0.24, height: 0.5, depth: 0.025 }, scene);
@@ -666,10 +779,43 @@ export default function Lab3dPage() {
         shirt.rotation.x = -0.02;
         shirt.material = makeMaterial('shirt', '#d7cdbd', 0.08);
 
-        const tie = B.MeshBuilder.CreateCylinder(`tie-${index}`, { diameterTop: 0.03, diameterBottom: 0.09, height: 0.38, tessellation: 4 }, scene);
-        tie.parent = root;
-        tie.position.set(0, 1.53, 0.416);
-        tie.material = accentMaterial;
+        // Col de chemise blanc, boutons de gilet, pochette de costume.
+        const collarMaterial = makeMaterial('collar', '#e6ddca', 0.1);
+        for (const side of [-1, 1]) {
+          const collarWing = B.MeshBuilder.CreateBox(`collar-${index}-${side}`, { width: 0.09, height: 0.07, depth: 0.03 }, scene);
+          collarWing.parent = root;
+          collarWing.position.set(side * 0.07, 1.85, 0.36);
+          collarWing.rotation.z = side * 0.5;
+          collarWing.material = collarMaterial;
+        }
+        const buttonMaterial = makeMaterial('buttons', '#c9a86a', 0.4, '#241605');
+        for (let b = 0; b < 3; b++) {
+          const button = B.MeshBuilder.CreateSphere(`button-${index}-${b}`, { diameter: 0.028, segments: 8 }, scene);
+          button.parent = root;
+          button.position.set(0.045, 1.66 - b * 0.13, 0.405 - b * 0.012);
+          button.material = buttonMaterial;
+        }
+        const pocketSquare = B.MeshBuilder.CreateBox(`pocket-${index}`, { width: 0.07, height: 0.05, depth: 0.015 }, scene);
+        pocketSquare.parent = root;
+        pocketSquare.position.set(-0.21, 1.62, 0.4);
+        pocketSquare.rotation.z = 0.2;
+        pocketSquare.material = accentMaterial;
+
+        if (!isFemale) {
+          const tie = B.MeshBuilder.CreateCylinder(`tie-${index}`, { diameterTop: 0.03, diameterBottom: 0.09, height: 0.38, tessellation: 4 }, scene);
+          tie.parent = root;
+          tie.position.set(0, 1.53, 0.416);
+          tie.material = accentMaterial;
+        } else {
+          // Collier de perles dorées en arc sur la poitrine.
+          const pearlMaterial = makeMaterial('pearls', '#d8b56a', 0.5, '#2a1c08');
+          for (let pearl = -2; pearl <= 2; pearl++) {
+            const bead = B.MeshBuilder.CreateSphere(`bead-${index}-${pearl}`, { diameter: 0.045, segments: 6 }, scene);
+            bead.parent = root;
+            bead.position.set(pearl * 0.055, 1.8 - Math.abs(pearl) * -0.02 - 0.04 * (2 - Math.abs(pearl)), 0.38);
+            bead.material = pearlMaterial;
+          }
+        }
 
         const collarLeft = B.MeshBuilder.CreateCylinder(`lapel-left-${index}`, { diameterTop: 0.04, diameterBottom: 0.13, height: 0.48, tessellation: 4 }, scene);
         collarLeft.parent = root;
@@ -681,22 +827,48 @@ export default function Lab3dPage() {
         collarRight.position.x = 0.15;
         collarRight.rotation.z = 0.42;
 
-        const neck = B.MeshBuilder.CreateCylinder(`neck-${index}`, { diameter: 0.25, height: 0.28, tessellation: 24 }, scene);
+        for (const side of [-1, 1]) {
+          const deltoid = addShadow(lowpoly(B.MeshBuilder.CreateSphere(`deltoid-${index}-${side}`, { diameter: 0.26, segments: 5 }, scene)));
+          deltoid.parent = root;
+          deltoid.position.set(side * 0.36, 1.86, 0.05);
+          deltoid.scaling.set(1.1, 0.82, 0.95);
+          deltoid.material = suitMaterial;
+        }
+        const neck = lowpoly(B.MeshBuilder.CreateCylinder(`neck-${index}`, { diameter: 0.25, height: 0.28, tessellation: 7 }, scene));
         neck.parent = root;
         neck.position.set(0, 1.97, 0.05);
         neck.material = faceMaterial;
 
-        const head = addShadow(B.MeshBuilder.CreateSphere(`head-${index}`, { diameter: 0.5, segments: 32 }, scene));
+        const head = addShadow(lowpoly(B.MeshBuilder.CreateSphere(`head-${index}`, { diameter: 0.5, segments: 8 }, scene)));
         head.parent = root;
         head.position.set(0, 2.19, 0.07);
         head.scaling.set(0.9, 1.12, 0.88);
         head.material = faceMaterial;
 
-        const nose = B.MeshBuilder.CreateSphere(`nose-${index}`, { diameter: 0.105, segments: 12 }, scene);
+        const nose = lowpoly(B.MeshBuilder.CreateSphere(`nose-${index}`, { diameter: 0.105, segments: 4 }, scene));
         nose.parent = root;
         nose.position.set(0, 2.18, 0.292);
         nose.scaling.set(0.72, 1.08, 1.05);
         nose.material = faceMaterial;
+
+        // ── Visage expressif : sourcils, bouche, moustache pour certains ──
+        for (const side of [-1, 1]) {
+          const brow = B.MeshBuilder.CreateBox(`brow-${index}-${side}`, { width: 0.1, height: 0.022, depth: 0.03 }, scene);
+          brow.parent = root;
+          brow.position.set(side * 0.095, 2.295, 0.275);
+          brow.rotation.z = side * -0.12;
+          brow.material = hairMaterial;
+        }
+        const mouth = B.MeshBuilder.CreateBox(`mouth-${index}`, { width: 0.11, height: 0.018, depth: 0.02 }, scene);
+        mouth.parent = root;
+        mouth.position.set(0, 2.075, 0.283);
+        mouth.material = makeMaterial('mouth', '#5e3028', 0.05);
+        if (player.style === 'fedora' && index % 2 === 0) {
+          const moustache = B.MeshBuilder.CreateBox(`moustache-${index}`, { width: 0.16, height: 0.035, depth: 0.03 }, scene);
+          moustache.parent = root;
+          moustache.position.set(0, 2.12, 0.288);
+          moustache.material = hairMaterial;
+        }
 
         const eyeMaterial = makeMaterial('eyes', '#18110d', 0.16);
         for (const side of [-1, 1]) {
@@ -704,7 +876,7 @@ export default function Lab3dPage() {
           eye.parent = root;
           eye.position.set(side * 0.095, 2.245, 0.29);
           eye.material = eyeMaterial;
-          const ear = B.MeshBuilder.CreateSphere(`ear-${index}-${side}`, { diameter: 0.11, segments: 10 }, scene);
+          const ear = lowpoly(B.MeshBuilder.CreateSphere(`ear-${index}-${side}`, { diameter: 0.11, segments: 5 }, scene));
           ear.parent = root;
           ear.position.set(side * 0.235, 2.19, 0.06);
           ear.scaling.set(0.58, 1, 0.46);
@@ -725,22 +897,29 @@ export default function Lab3dPage() {
           band.position.set(0, 2.43, 0.035);
           band.material = accentMaterial;
         } else {
-          const hairCap = B.MeshBuilder.CreateSphere(`hair-cap-${index}`, { diameter: 0.535, segments: 24 }, scene);
+          const hairCap = lowpoly(B.MeshBuilder.CreateSphere(`hair-cap-${index}`, { diameter: 0.535, segments: 8 }, scene));
           hairCap.parent = root;
           hairCap.position.set(0, 2.31, 0.04);
           hairCap.scaling.set(0.94, 0.62, 0.92);
           hairCap.material = hairMaterial;
           if (player.style === 'bob' || player.style === 'wave') {
             for (const side of [-1, 1]) {
-              const lock = B.MeshBuilder.CreateSphere(`hair-lock-${index}-${side}`, { diameter: 0.25, segments: 14 }, scene);
+              const lock = lowpoly(B.MeshBuilder.CreateSphere(`hair-lock-${index}-${side}`, { diameter: 0.25, segments: 6 }, scene));
               lock.parent = root;
               lock.position.set(side * 0.21, 2.17, 0.015);
               lock.scaling.set(0.75, 1.45, 0.72);
               lock.material = hairMaterial;
             }
           }
+          if (player.style === 'wave') {
+            const backHair = lowpoly(B.MeshBuilder.CreateSphere(`hair-back-${index}`, { diameter: 0.34, segments: 6 }, scene));
+            backHair.parent = root;
+            backHair.position.set(0, 2.05, -0.16);
+            backHair.scaling.set(0.9, 1.9, 0.55);
+            backHair.material = hairMaterial;
+          }
           if (player.style === 'bun') {
-            const bun = B.MeshBuilder.CreateSphere(`hair-bun-${index}`, { diameter: 0.27, segments: 18 }, scene);
+            const bun = lowpoly(B.MeshBuilder.CreateSphere(`hair-bun-${index}`, { diameter: 0.27, segments: 6 }, scene));
             bun.parent = root;
             bun.position.set(0, 2.38, -0.2);
             bun.material = hairMaterial;
@@ -748,31 +927,72 @@ export default function Lab3dPage() {
         }
 
         for (const side of [-1, 1]) {
-          const upperArm = addShadow(B.MeshBuilder.CreateCapsule(`upper-arm-${index}-${side}`, { radius: 0.105, height: 0.68, tessellation: 18 }, scene));
+          const upperArm = addShadow(lowpoly(B.MeshBuilder.CreateCylinder(`upper-arm-${index}-${side}`, { diameterTop: 0.17, diameterBottom: 0.22, height: 0.68, tessellation: 7 }, scene)));
           upperArm.parent = root;
           upperArm.position.set(side * 0.39, 1.42, 0.15);
           upperArm.rotation.x = 0.42;
           upperArm.rotation.z = side * 0.13;
           upperArm.material = suitMaterial;
 
-          const forearm = addShadow(B.MeshBuilder.CreateCapsule(`forearm-${index}-${side}`, { radius: 0.09, height: 0.72, tessellation: 18 }, scene));
+          const forearm = addShadow(lowpoly(B.MeshBuilder.CreateCylinder(`forearm-${index}-${side}`, { diameterTop: 0.16, diameterBottom: 0.13, height: 0.72, tessellation: 7 }, scene)));
           forearm.parent = root;
           forearm.position.set(side * 0.37, 1.22, 0.48);
           forearm.rotation.x = 1.17;
           forearm.rotation.z = side * 0.1;
           forearm.material = suitMaterial;
 
-          const hand = B.MeshBuilder.CreateSphere(`hand-${index}-${side}`, { diameter: 0.17, segments: 14 }, scene);
+          const hand = lowpoly(B.MeshBuilder.CreateSphere(`hand-${index}-${side}`, { diameter: 0.17, segments: 6 }, scene));
           hand.parent = root;
           hand.position.set(side * 0.35, 1.23, 0.79);
           hand.scaling.set(0.82, 0.5, 1.15);
           hand.material = faceMaterial;
+          // Manchette de chemise entre la manche et la main.
+          const cuff = B.MeshBuilder.CreateCylinder(`cuff-${index}-${side}`, { diameter: 0.2, height: 0.06, tessellation: 14 }, scene);
+          cuff.parent = root;
+          cuff.position.set(side * 0.36, 1.235, 0.68);
+          cuff.rotation.x = 1.17;
+          cuff.material = makeMaterial('cuff', '#ddd3bf', 0.1);
         }
 
         const dossier = B.MeshBuilder.CreateBox(`dossier-${index}`, { width: 0.55, height: 0.025, depth: 0.36 }, scene);
         dossier.parent = root;
-        dossier.position.set(0, 1.25, 1.12);
+        dossier.position.set(0, 1.5, 1.12);
         dossier.material = makeMaterial('dossier', '#211711', 0.04);
+
+        // ── Accessoires de mafieux : cigare fumant OU verre de whisky ──
+        if (!isFemale && player.style === 'fedora' && rnd(5) < 0.55) {
+          const cigar = B.MeshBuilder.CreateCylinder(`cigar-${index}`, { diameter: 0.035, height: 0.16, tessellation: 6 }, scene);
+          cigar.parent = root;
+          cigar.position.set(0.09, 2.09, 0.31);
+          cigar.rotation.x = Math.PI / 2 - 0.25;
+          cigar.rotation.z = -0.3;
+          cigar.material = makeMaterial('cigar', '#4a2c14', 0.08);
+          const ember = B.MeshBuilder.CreateSphere(`ember-${index}`, { diameter: 0.03, segments: 6 }, scene);
+          ember.parent = root;
+          ember.position.set(0.125, 2.115, 0.38);
+          const emberMaterial = new B.StandardMaterial(`ember-material-${index}`, scene);
+          emberMaterial.diffuseColor = B.Color3.Black();
+          emberMaterial.emissiveColor = B.Color3.FromHexString('#ff5a24');
+          ember.material = emberMaterial;
+          glow.addIncludedOnlyMesh(ember);
+        } else if (rnd(6) < 0.45) {
+          const glass = B.MeshBuilder.CreateCylinder(`glass-${index}`, {
+            diameterTop: 0.11, diameterBottom: 0.09, height: 0.12, tessellation: 8,
+          }, scene);
+          glass.parent = root;
+          glass.position.set(0.4, 1.57, 1.02);
+          const glassMaterial = new B.StandardMaterial(`glass-material-${index}`, scene);
+          glassMaterial.diffuseColor = B.Color3.FromHexString('#9a8f7a');
+          glassMaterial.alpha = 0.35;
+          glassMaterial.specularColor = new B.Color3(0.5, 0.5, 0.45);
+          glass.material = glassMaterial;
+          const whisky = B.MeshBuilder.CreateCylinder(`whisky-${index}`, {
+            diameter: 0.085, height: 0.05, tessellation: 8,
+          }, scene);
+          whisky.parent = root;
+          whisky.position.set(0.4, 1.545, 1.02);
+          whisky.material = makeMaterial('whisky', '#8a4d12', 0.3, '#3a1e05');
+        }
 
         const tag = new B.GUI.Rectangle(`tag-${index}`);
         tag.height = '30px';
@@ -811,26 +1031,27 @@ export default function Lab3dPage() {
       const createImportedPlayer = (player, index) => {
         const angle = (index / PLAYERS.length) * Math.PI * 2 - Math.PI / 2;
         const root = new B.TransformNode(`glb-player-${index}`, scene);
-        root.position.set(Math.cos(angle) * 4.92, 0, Math.sin(angle) * 3.88);
+        root.position.set(Math.cos(angle) * 3.85, 0, Math.sin(angle) * 3.05);
         root.lookAt(new B.Vector3(0, 0, 0));
 
         const chairWood = makeMaterial('glb-chair-wood', '#25140b', 0.18);
         const chairLeather = makeMaterial('glb-chair-leather', '#301b15', 0.1);
         const chairAccent = makeMaterial(`glb-chair-accent-${index}`, player.accent, 0.24);
 
-        const seat = addShadow(B.MeshBuilder.CreateBox(`glb-seat-${index}`, { width: 0.98, depth: 0.9, height: 0.14 }, scene));
+        // Assise rehaussée (0.86) : personnage plus haut, pieds au sol.
+        const seat = addShadow(B.MeshBuilder.CreateBox(`glb-seat-${index}`, { width: 0.92, depth: 0.9, height: 0.15 }, scene));
         seat.parent = root;
-        seat.position.set(0, 0.56, -0.18);
+        seat.position.set(0, 0.86, -0.18);
         seat.material = chairLeather;
 
         // Pieds de chaise : quatre pieds tournés + barreaux latéraux.
         for (const sx of [-1, 1]) {
           for (const sz of [-1, 1]) {
             const leg = B.MeshBuilder.CreateCylinder(`glb-chair-leg-${index}-${sx}-${sz}`, {
-              diameterTop: 0.075, diameterBottom: 0.095, height: 0.52, tessellation: 12,
+              diameterTop: 0.08, diameterBottom: 0.105, height: 0.82, tessellation: 12,
             }, scene);
             leg.parent = root;
-            leg.position.set(sx * 0.42, 0.26, -0.18 + sz * 0.37);
+            leg.position.set(sx * 0.39, 0.41, -0.18 + sz * 0.35);
             leg.material = chairWood;
           }
           const stretcher = B.MeshBuilder.CreateCylinder(`glb-chair-stretcher-${index}-${sx}`, {
@@ -838,28 +1059,28 @@ export default function Lab3dPage() {
           }, scene);
           stretcher.parent = root;
           stretcher.rotation.x = Math.PI / 2;
-          stretcher.position.set(sx * 0.42, 0.18, -0.18);
+          stretcher.position.set(sx * 0.39, 0.3, -0.18);
           stretcher.material = chairWood;
         }
 
-        const chairBack = addShadow(B.MeshBuilder.CreateBox(`glb-chair-back-${index}`, { width: 1.02, depth: 0.13, height: 1.48 }, scene));
+        const chairBack = addShadow(B.MeshBuilder.CreateBox(`glb-chair-back-${index}`, { width: 0.94, depth: 0.13, height: 1.28 }, scene));
         chairBack.parent = root;
-        chairBack.position.set(0, 1.27, -0.54);
+        chairBack.position.set(0, 1.55, -0.52);
         chairBack.material = chairLeather;
 
-        const topRail = B.MeshBuilder.CreateBox(`glb-chair-rail-${index}`, { width: 1.12, depth: 0.17, height: 0.12 }, scene);
+        const topRail = B.MeshBuilder.CreateBox(`glb-chair-rail-${index}`, { width: 1.04, depth: 0.17, height: 0.12 }, scene);
         topRail.parent = root;
-        topRail.position.set(0, 2.01, -0.54);
+        topRail.position.set(0, 2.22, -0.52);
         topRail.material = chairWood;
 
         for (const side of [-1, 1]) {
-          const post = B.MeshBuilder.CreateCylinder(`glb-chair-post-${index}-${side}`, { diameter: 0.11, height: 1.68, tessellation: 18 }, scene);
+          const post = B.MeshBuilder.CreateCylinder(`glb-chair-post-${index}-${side}`, { diameter: 0.11, height: 1.62, tessellation: 18 }, scene);
           post.parent = root;
-          post.position.set(side * 0.53, 1.28, -0.55);
+          post.position.set(side * 0.49, 1.45, -0.53);
           post.material = chairWood;
           const finial = B.MeshBuilder.CreateSphere(`glb-chair-finial-${index}-${side}`, { diameter: 0.18, segments: 14 }, scene);
           finial.parent = root;
-          finial.position.set(side * 0.53, 2.12, -0.55);
+          finial.position.set(side * 0.49, 2.3, -0.53);
           finial.material = chairAccent;
         }
 
@@ -867,106 +1088,156 @@ export default function Lab3dPage() {
         // fitNode : normalisation du modèle, MESURÉE EN ESPACE NEUTRE (à
         // l'origine, sans rotation) puis parentée — mélanger bornes monde et
         // position locale éparpillait les personnages loin des chaises.
-        const avatarRoot = new B.TransformNode(`wong-avatar-${index}`, scene);
-        avatarRoot.parent = root;
-        avatarRoot.rotation.y = Math.PI; // le glTF Sketchfab regarde vers -Z
-        avatarRoot.position.set(0, 0.55, -0.08); // buste visible au-dessus du plateau
+        const isFemale = ['bob', 'wave', 'bun'].includes(player.style);
 
-        const fitNode = new B.TransformNode(`wong-fit-${index}`, scene);
-        const instance = characterAssets.instantiateModelsToScene(
-          (sourceName) => `wong-${index}-${sourceName}`,
+        // ── Combinaison de skin DÉTERMINISTE par joueur : tenue habillée,
+        // teinte de peau, coiffure, barbe — stable d'un rendu à l'autre.
+        const rndSkin = (n) => {
+          const v = Math.sin(index * 91.7 + n * 47.3) * 43758.5453;
+          return v - Math.floor(v);
+        };
+        const look = {
+          outfit: rndSkin(1) < 0.5 ? 'Peasant' : 'Ranger',
+          skinTone: rndSkin(2) < 0.72 ? 'light' : 'dark',
+          hairstyle: isFemale
+            ? ['Hair_BuzzedFemale', 'Hair_Long', 'Hair_Buns'][Math.floor(rndSkin(3) * 3)]
+            : ['Hair_Buzzed', 'Hair_SimpleParted', 'Hair_Long'][Math.floor(rndSkin(3) * 3)],
+          beard: !isFemale && rndSkin(4) < 0.4,
+        };
+
+        const avatarRoot = new B.TransformNode(`quaternius-avatar-${index}`, scene);
+        avatarRoot.parent = root;
+        avatarRoot.rotation.y = 0; // les Quaternius regardent déjà +Z → face à la table
+        avatarRoot.position.set(0, 0, -0.12);
+
+        const fitNode = new B.TransformNode(`quaternius-fit-${index}`, scene);
+        const instance = characterAssets[`body-${isFemale ? 'female' : 'male'}`].instantiateModelsToScene(
+          (sourceName) => `q-${index}-${sourceName}`,
           true,
           { doNotInstantiate: true },
         );
         instance.rootNodes.forEach((modelRoot) => { modelRoot.parent = fitNode; });
 
-        // 1. Mesure en espace neutre.
+        // Tenue par-dessus le corps (même squelette, même espace modèle).
+        const outfitContainer = characterAssets[`outfit-${isFemale ? 'female' : 'male'}-${look.outfit}`];
+        if (outfitContainer) {
+          const outfitInstance = outfitContainer.instantiateModelsToScene(
+            (sourceName) => `qo-${index}-${sourceName}`,
+            true,
+            { doNotInstantiate: true },
+          );
+          outfitInstance.rootNodes.forEach((node) => { node.parent = fitNode; });
+        }
+
+        // Coiffure / sourcils / barbe : attachés à l'os de la tête (setParent
+        // préserve la position monde) → ils suivront la pose assise.
+        const headNode = fitNode.getChildTransformNodes(false)
+          .find((node) => node.name.split('-').pop() === 'Head');
+        const attachToHead = (key) => {
+          const container = characterAssets[key];
+          if (!container) return;
+          const part = container.instantiateModelsToScene(
+            (sourceName) => `qh-${index}-${key}-${sourceName}`,
+            true,
+            { doNotInstantiate: true },
+          );
+          part.rootNodes.forEach((node) => {
+            node.parent = fitNode;
+            if (headNode) node.setParent(headNode);
+          });
+        };
+        attachToHead(look.hairstyle);
+        attachToHead(isFemale ? 'Eyebrows_Female' : 'Eyebrows_Regular');
+        if (look.beard) attachToHead('Hair_Beard');
+
+        // 1. Normalisation en espace neutre. Taille volontairement généreuse
+        // (2,25 m debout) : à l'échelle réelle, un humain assis derrière cette
+        // grande table paraissait minuscule à la caméra.
         fitNode.computeWorldMatrix(true);
         let bounds = fitNode.getHierarchyBoundingVectors(true);
-        let extentY = bounds.max.y - bounds.min.y;
-        const extentZ = bounds.max.z - bounds.min.z;
-        // 2. Modèle couché (wrapper FBX Z-up perdu au clonage) → on le redresse.
-        if (extentZ > extentY * 1.4) {
-          fitNode.rotation.x = -Math.PI / 2;
-          fitNode.computeWorldMatrix(true);
-          bounds = fitNode.getHierarchyBoundingVectors(true);
-          extentY = bounds.max.y - bounds.min.y;
-        }
-        // 3. Échelle volontairement généreuse : le buste doit rester lisible
-        // derrière la grande table, quel que soit l'export (cm, m, ×100).
-        const scaleFactor = 2.15 / Math.max(0.001, extentY);
+        const extentY = Math.max(0.001, bounds.max.y - bounds.min.y);
+        const CHARACTER_HEIGHT = 2.8;
+        const scaleFactor = CHARACTER_HEIGHT / extentY;
         fitNode.scaling.scaleInPlace(scaleFactor);
         fitNode.computeWorldMatrix(true);
         bounds = fitNode.getHierarchyBoundingVectors(true);
-        // 4. Centrage : pieds au sol, axé sur l'assise.
         fitNode.position.x -= (bounds.min.x + bounds.max.x) / 2;
         fitNode.position.z -= (bounds.min.z + bounds.max.z) / 2;
         fitNode.position.y -= bounds.min.y;
-        // 5. Ancrage au fauteuil — la transformation locale calculée reste
-        // valable puisqu'elle devient relative à l'ancre.
         fitNode.parent = avatarRoot;
 
-        const suitTint = B.Color3.FromHexString(player.suit);
-        const accentTint = B.Color3.FromHexString(player.accent);
-        const capTint = B.Color3.FromHexString(player.hair);
+        // 2. Pose ASSISE réelle : rotation des os du squelette (cuisses,
+        // genoux, colonne, bras) — plus d'astuce de masquage.
+        applySeatedPose(avatarRoot);
+        // Une fois les jambes pliées, le bassin descend au niveau de l'assise
+        // (les hanches sont à ~52 % de la taille debout).
+        const SEAT_TOP = 0.94;
+        avatarRoot.position.y = SEAT_TOP - CHARACTER_HEIGHT * 0.52;
 
+        // 3. Matériaux : peau par TEXTURE (light/dark), tenue teintée aux
+        // couleurs du joueur, coiffure intégrée du corps masquée, tranche au
+        // cou (le corps musclé transpercerait la tenue).
+        const suitTint = B.Color3.FromHexString(player.suit);
+        const hairTint = B.Color3.FromHexString(player.hair);
+        // Hauteur monde du cou en position ASSISE : bassin sur l'assise +
+        // longueur de buste (le cou est à ~82,5 % de la taille debout).
+        const clipY = 0.94 + (0.825 - 0.52) * CHARACTER_HEIGHT;
         avatarRoot.getChildMeshes(false).forEach((mesh) => {
           mesh.isPickable = false;
-          // Les clones de maillages "skinnés" héritent parfois d'une boîte
-          // englobante fausse → frustum culling abusif → personnage invisible.
+          // Boîte englobante des clones skinnés parfois fausse → anti-culling.
           mesh.alwaysSelectAsActiveMesh = true;
           shadows.addShadowCaster(mesh);
           mesh.receiveShadows = true;
 
-          const materialName = mesh.material?.name ?? '';
-          // La posture source est debout. Le bas du corps est retiré : le
-          // plateau et le fauteuil recomposent une silhouette assise naturelle.
-          if (/Std_Skin_Leg|TT_color|shoes_001/i.test(materialName)) {
+          const material = mesh.material;
+          if (!material) return;
+          const materialName = material.name ?? '';
+
+          // La coiffure moulée dans le corps est remplacée par nos attaches.
+          if (/MI_Hair/i.test(materialName) && mesh.name.startsWith(`q-${index}`)) {
             mesh.setEnabled(false);
             return;
           }
 
-          const material = mesh.material;
-          if (!material) return;
-          if ('roughness' in material) material.roughness = Math.max(material.roughness ?? 0, 0.48);
+          if (/Superhero/i.test(materialName)) {
+            // Corps : texture de peau choisie + tranche sous le cou.
+            const skinMat = material.clone(`skin-p${index}`);
+            const url = SKIN_TEXTURES[isFemale ? 'female' : 'male'][look.skinTone];
+            if (!skinTextureCache.has(url)) skinTextureCache.set(url, new B.Texture(url, scene, false, false));
+            if ('albedoTexture' in skinMat) skinMat.albedoTexture = skinTextureCache.get(url);
+            else if ('diffuseTexture' in skinMat) skinMat.diffuseTexture = skinTextureCache.get(url);
+            // Rehaussement doux : les visages restaient noyés dans la pénombre.
+            if ('emissiveColor' in skinMat) skinMat.emissiveColor = new B.Color3(0.085, 0.062, 0.045);
+            if ('emissiveIntensity' in skinMat) skinMat.emissiveIntensity = 1;
+            mesh.material = skinMat;
+            mesh.onBeforeRenderObservable.add(() => { scene.clipPlane = new B.Plane(0, -1, 0, clipY); });
+            mesh.onAfterRenderObservable.add(() => { scene.clipPlane = null; });
+            return;
+          }
 
           let tint = null;
           let strength = 0;
-          if (/FS_waistcoat/i.test(materialName)) {
-            tint = suitTint;
-            strength = 0.52;
-          } else if (/FS_Tie/i.test(materialName)) {
-            tint = accentTint;
-            strength = 0.7;
-          } else if (/FS_Shirt/i.test(materialName)) {
-            tint = B.Color3.FromHexString('#d8cbb8');
-            strength = 0.18;
-          } else if (/Flat_Cap/i.test(materialName)) {
-            tint = capTint;
-            strength = 0.48;
+          if (/Peasant|Ranger/i.test(materialName)) { tint = suitTint; strength = 0.45; }
+          else if (/Hair/i.test(materialName)) { tint = hairTint; strength = 0.7; }
+          if (!tint) return;
+          const tinted = material.clone(`${materialName}-p${index}`);
+          if ('albedoColor' in tinted) {
+            tinted.albedoColor = B.Color3.Lerp(B.Color3.White(), tint, strength);
+          } else if ('diffuseColor' in tinted) {
+            tinted.diffuseColor = B.Color3.Lerp(B.Color3.White(), tint, strength);
           }
-
-          // Les matériaux sont partagés entre instances : clone par joueur
-          // pour que chaque mafioso garde sa propre teinte.
-          if (tint) {
-            const tinted = material.clone(`${materialName}-p${index}`);
-            if ('albedoColor' in tinted) {
-              tinted.albedoColor = B.Color3.Lerp(tinted.albedoColor ?? B.Color3.White(), tint, strength);
-            } else if ('diffuseColor' in tinted) {
-              tinted.diffuseColor = B.Color3.Lerp(tinted.diffuseColor ?? B.Color3.White(), tint, strength);
-            }
-            mesh.material = tinted;
-          }
+          if ('roughness' in tinted) tinted.roughness = Math.max(tinted.roughness ?? 0, 0.5);
+          mesh.material = tinted;
         });
 
         const dossier = B.MeshBuilder.CreateBox(`glb-dossier-${index}`, { width: 0.56, height: 0.025, depth: 0.38 }, scene);
         dossier.parent = root;
-        dossier.position.set(0, 1.25, 1.1);
+        dossier.position.set(0, 1.5, 1.1);
         dossier.material = makeMaterial('glb-dossier', '#201610', 0.05);
 
         const anchor = B.MeshBuilder.CreateSphere(`glb-tag-anchor-${index}`, { diameter: 0.01, segments: 4 }, scene);
         anchor.parent = root;
-        anchor.position.set(0, 2.18, 0);
+        anchor.position.set(0, 2.35, 0); // au-dessus de la tête assise
         anchor.visibility = 0;
         anchor.isPickable = false;
 
@@ -983,7 +1254,7 @@ export default function Lab3dPage() {
         tag.paddingRight = '2px';
         gui.addControl(tag);
         tag.linkWithMesh(anchor);
-        tag.linkOffsetY = -10;
+        tag.linkOffsetY = -26;
 
         const label = new B.GUI.TextBlock(`glb-label-${index}`);
         label.text = `  ${String(index + 1).padStart(2, '0')}  ${player.name}  `;
@@ -1101,7 +1372,10 @@ export default function Lab3dPage() {
           <time>02:14</time>
         </div>
 
-        <Link href="/lobby" className={styles.backLink}>← RETOUR AU LOBBY</Link>
+        <span style={{ display: 'flex', gap: 10 }}>
+          <Link href="/lab3d/studio" className={styles.backLink}>🎨 STUDIO PERSONNAGE</Link>
+          <Link href="/lobby" className={styles.backLink}>← RETOUR AU LOBBY</Link>
+        </span>
       </header>
 
       <aside className={styles.partyCard}>

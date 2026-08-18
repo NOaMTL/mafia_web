@@ -9169,3 +9169,73 @@ html[data-theme="light"] .user-menu-item small { color: rgba(48,34,14,.58); }
   .landing-hero .cta-row .btn-gold,
   .landing-hero .cta-row .btn-outline { width: 100%; }
 }
+
+/* ── PHASE NUIT : la vidéo d'ambiance prend TOUTE la page ─────────────────────
+   La table et les avatars disparaissent, l'action de nuit passe en overlay
+   par-dessus l'animation. ─────────────────────────────────────────────────── */
+.table-scene.phase-night {
+  background-image: none !important;
+  background-color: transparent;
+}
+.table-scene.phase-night > .night-video-backdrop.contained {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  border-radius: 0;
+}
+.table-scene.phase-night > .night-video-backdrop.contained video {
+  border-radius: 0;
+  opacity: .95;
+  filter: saturate(.85) contrast(1.08) brightness(.8);
+}
+/* Table centrale et sièges masqués : place à l'animation. */
+.table-scene.phase-night .table-oval,
+.table-scene.phase-night .seat { display: none; }
+/* Tout le contenu de la scène (interface d'action de nuit) passe en overlay. */
+.table-scene.phase-night > *:not(.night-video-backdrop) {
+  position: relative;
+  z-index: 2;
+}
+/* Les panneaux latéraux, le topbar et les onglets mobiles restent au-dessus
+   de la vidéo plein écran. */
+.game-shell .game-main > .side-panel { position: relative; z-index: 5; }
+.game-mobile-tabs { z-index: 220; }
+/* Voile de lisibilité léger derrière l'interface d'action de nuit. */
+.table-scene.phase-night .phase-stage {
+  background: rgba(2, 5, 9, .42);
+  border-radius: 18px;
+  backdrop-filter: blur(3px);
+}
+
+/* ── PHASE NUIT : composition centrée de l'overlay ──────────────────────────
+   La scène devient une colonne : carte d'action au centre, dossier en
+   dessous — fini les blocs éparpillés sur la vidéo. ───────────────────────── */
+.table-scene.phase-night {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px clamp(12px, 4vw, 48px);
+}
+.table-scene.phase-night .phase-stage {
+  width: min(880px, 100%);
+  max-height: calc(100svh - 210px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 22px 26px;
+  border: 1px solid rgba(210, 167, 82, .3);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+}
+/* Le bouton dossier s'aligne sous la carte, même largeur visuelle. */
+.table-scene.phase-night .dossier-quick-access {
+  position: static;
+  width: min(880px, 100%);
+  justify-content: center;
+  background: rgba(2, 5, 9, .55);
+  border: 1px solid rgba(210, 167, 82, .25);
+  backdrop-filter: blur(3px);
+}
+/* La barre "CHOISIS TA CIBLE" du bas est redondante avec la carte : masquée. */
+.table-scene.phase-night .action-main { display: none; }
