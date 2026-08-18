@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
+import UserMenu from '@/components/UserMenu';
 
 function PeopleIcon() {
   return (
@@ -60,9 +61,7 @@ export default function LandingPage() {
             <span aria-hidden="true">◎</span> FR <span className="chevron">⌄</span>
           </span>
           {session ? (
-            <button className="btn-gold" onClick={() => router.push('/lobby')}>
-              {session.username.toUpperCase()}
-            </button>
+            <UserMenu session={session} className="landing-user-account" />
           ) : (
             <>
               <button className="btn-outline" onClick={() => router.push('/auth')}>

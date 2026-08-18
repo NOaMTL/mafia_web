@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { api, clearSession } from '@/lib/api';
+import { usePathname } from 'next/navigation';
+import { api } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
+import UserMenu from '@/components/UserMenu';
+
+const MAIN_LINKS = [
+  { href: '/shop', label: 'BOUTIQUE' },
+  { href: '/leaderboard', label: 'CLASSEMENT' },
+  { href: '/guide', label: 'GUIDE' },
+];
 
 export default function NavHeader({ session, diamonds }) {
-  const router = useRouter();
+  const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -16,28 +24,42 @@ export default function NavHeader({ session, diamonds }) {
     return () => { active = false; };
   }, [session]);
 
+  useEffect(() => setMenuOpen(false), [pathname]);
+
+  const isActive = (href) => pathname === href
+    || pathname.startsWith(`${href}/`);
+
   return (
-    <div className="nav-header">
+    <header className={`nav-header ${session ? 'has-session' : 'is-guest'}`}>
       <BrandMark href="/lobby" compact />
-      <div className="nav-links">
-        <Link href="/lobby">JOUER</Link>
-        <Link href="/profile">PROFIL</Link>
-        <Link href="/shop">BOUTIQUE</Link>
-        <Link href="/leaderboard">CLASSEMENT</Link>
-        <Link href="/guide">GUIDE</Link>
-        {isAdmin && <Link className="nav-admin-link" href="/admin">ADMIN</Link>}
-        {diamonds != null && (
-          <span style={{ padding: '8px 12px', color: 'var(--blue)', fontSize: 13 }}>
-            💎 {diamonds}
-          </span>
+      <button type="button" className={`nav-menu-toggle ${menuOpen ? 'open' : ''}`}
+              aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'} aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((value) => !value)}>
+        <i><span /><span /><span /></i>
+      </button>
+      <nav className={`nav-links ${menuOpen ? 'open' : ''}`} aria-label="Navigation principale">
+        {MAIN_LINKS.map((item) => (
+          <Link key={item.href} href={item.href}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+                className={`nav-link ${item.className ?? ''} ${isActive(item.href) ? 'active' : ''}`}>
+            {item.label}
+          </Link>
+        ))}
+        {isAdmin && (
+          <Link className={`nav-link nav-admin-link ${isActive('/admin') ? 'active' : ''}`}
+                aria-current={isActive('/admin') ? 'page' : undefined} href="/admin"
+                onClick={() => setMenuOpen(false)}>ADMIN</Link>
         )}
-        {session && (
-          <a style={{ cursor: 'pointer' }}
-             onClick={() => { clearSession(); router.replace('/'); }}>
-            SORTIR
-          </a>
-        )}
+      </nav>
+
+      <div className="nav-actions">
+        {session && <UserMenu session={session} diamonds={diamonds} showPoints className="nav-account" />}
+        <Link href="/lobby" aria-current={isActive('/lobby') ? 'page' : undefined}
+              className={`nav-header-play ${isActive('/lobby') ? 'active' : ''}`}>
+          <span>JOUER</span><b aria-hidden="true">→</b>
+        </Link>
       </div>
-    </div>
+    </header>
   );
 }

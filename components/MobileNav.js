@@ -10,7 +10,6 @@ const ITEMS = [
   { href: '/guide',       icon: '📖', label: 'GUIDE' },
   { href: '/leaderboard', icon: '🏆', label: 'CLASSEMENT' },
   { href: '/shop',        icon: '🛒', label: 'BOUTIQUE' },
-  { href: '/profile',     icon: '👤', label: 'PROFIL' },
 ];
 
 /**
@@ -29,8 +28,7 @@ export default function MobileNav() {
   return (
     <nav className="mobile-nav" aria-label="Navigation mobile">
       {ITEMS.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-          || (item.href === '/profile' && pathname.startsWith('/history'));
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link key={item.href} href={item.href}
                 className={`mobile-nav-item ${active ? 'active' : ''}`}>

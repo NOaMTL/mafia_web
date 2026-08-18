@@ -10,6 +10,7 @@ import { getAccessibilitySettings, applyAccessibilitySettings, saveAccessibility
 import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
 import ConnectionBanner from '@/components/ConnectionBanner';
+import RoleIcon from '@/components/RoleIcon';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
@@ -34,16 +35,6 @@ const ROLE_LABELS = {
   LOOKOUT: 'Guetteur', BODYGUARD: 'Garde du corps', CONSORT: 'Consort', MAYOR: 'Maire',
   BUS_DRIVER: 'Chauffeur de bus', VETERAN: 'Vétéran', SPY: 'Espion',
   MEDIUM: 'Médium',
-};
-
-const ROLE_EMOJI = {
-  CITIZEN: '🏘️', MAFIOSO: '🔪', SHERIFF: '⭐', DETECTIVE: '👣',
-  INVESTIGATOR: '🔎', DOCTOR: '⚕️', VIGILANTE: '🔫',
-  GODFATHER: '🎩', ESCORT: '💃', CONSIGLIERE: '🕵️',
-  BLACKMAILER: '🤐', JANITOR: '🧹', FRAMER: '🖋️',
-  LOOKOUT: '👁️', BODYGUARD: '🛡️', CONSORT: '🥀', MAYOR: '🏛️',
-  BUS_DRIVER: '🚌', VETERAN: '🎖️', SPY: '📡',
-  MEDIUM: '🔮',
 };
 
 const NIGHT_PROMPTS = {
@@ -716,7 +707,7 @@ export default function GamePage() {
           <div className="final-roster">
             {(winner.players ?? []).map((p) => (
               <div key={p.userId} className={`final-player ${p.team === 'MAFIA' ? 'mafia' : 'village'} ${p.isAlive ? '' : 'eliminated'}`}>
-                <span className="final-role-icon">{ROLE_EMOJI[p.role] ?? '❓'}</span>
+                <RoleIcon roleKey={p.role} className="final-role-icon" />
                 <div>
                   <strong>{p.username}</strong>
                   <small>{ROLE_LABELS[p.role] ?? p.role}</small>
@@ -766,7 +757,7 @@ export default function GamePage() {
                 <div className="role-card-classified">DOSSIER CONFIDENTIEL · TOUR {round}</div>
                 <div className="role-sigil">
                   <span className="sigil-ring" aria-hidden="true" />
-                  <div className="role-icon">{ROLE_EMOJI[role.role] ?? '❓'}</div>
+                  <RoleIcon roleKey={role.role} className="role-icon" />
                 </div>
                 <div className="role-reveal-copy">
                   <div className="role-overline">VOUS ÊTES</div>
@@ -841,7 +832,7 @@ export default function GamePage() {
       <main className={`night-resolve-screen night-set-${resolveTheme.set}`} style={{ '--resolve-accent': resolveTheme.accent }}>
         <div className="ambiance ambiance-night on" />
         <div className="night-resolve-vignette" aria-hidden="true" />
-        <div className="night-moon role-resolve-icon" aria-hidden="true"><span>{resolveTheme.icon}</span></div>
+        <div className="night-moon role-resolve-icon" aria-hidden="true"><RoleIcon roleKey={role?.role} className="role-resolve-art" /></div>
         <section className="night-resolve-content">
           <div className="page-eyebrow">NUIT {round} · LA VILLE RETIENT SON SOUFFLE</div>
           <h1>{actionConfirmed ? 'TON ACTION EST SCELLÉE' : role?.role === 'MEDIUM' ? 'LE VOILE SE REFERME…' : 'LA NUIT S’ACHÈVE…'}</h1>
@@ -1242,7 +1233,7 @@ export default function GamePage() {
                 {mafiaTeammateIds.has(p.userId) && <span className="mafia-mate-badge">MAFIA</span>}
                 {p.roleHidden && <span className="cleaned-badge">NETTOYÉ</span>}
                 {!p.isAlive && p.role && (
-                  <span className="dead-role-chip">{ROLE_EMOJI[p.role] ?? ''} {ROLE_LABELS[p.role] ?? p.role}</span>
+                  <span className="dead-role-chip"><RoleIcon roleKey={p.role} className="dead-role-art" /> {ROLE_LABELS[p.role] ?? p.role}</span>
                 )}
                 {!p.isAlive && <span style={{ fontSize: 11 }}>💀</span>}
               </div>
@@ -1439,7 +1430,7 @@ function PhaseCenterStage({
         </header>
         <div className="night-role-layout">
           <article className="night-role-brief">
-            <span className="night-role-icon">{theme.icon}</span>
+            <RoleIcon roleKey={role?.role} className="night-role-icon" />
             <small>MISSION NOCTURNE</small>
             <h1>{theme.title}</h1>
             <p>{theme.copy}</p>
@@ -1722,7 +1713,7 @@ function RoleCardModal({ role, round, teammates, onClose }) {
           <i className="role-card-corner bottom-left" aria-hidden="true" />
           <i className="role-card-corner bottom-right" aria-hidden="true" />
           <div className="role-card-security"><span>CONFIDENTIEL</span><b>LG-{String(round).padStart(2, '0')}</b></div>
-          <div className="role-card-emblem" aria-hidden="true"><span>{ROLE_EMOJI[role.role] ?? '❓'}</span></div>
+          <div className="role-card-emblem" aria-hidden="true"><RoleIcon roleKey={role.role} className="role-card-art" /></div>
           <div className="role-card-identity">
             <small>VOUS ÊTES</small>
             <h1 id="role-card-title">{(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>

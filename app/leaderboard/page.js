@@ -75,39 +75,36 @@ export default function LeaderboardPage() {
         const url  = r.avatarId ? avatarMap[r.avatarId] : null;
         const isMe = r.username === session.username;
         return (
-          <div key={r.rank} className={`achievement-row leaderboard-row rank-${r.rank}`}
-               style={isMe ? { borderColor: 'var(--gold)', background: 'rgba(184,150,62,.08)' } : undefined}>
-            <span className="cinzel" style={{ width: 34, textAlign: 'center',
-                                              fontSize: r.rank <= 3 ? 20 : 13,
-                                              color: 'var(--text-dim)' }}>
+          <div key={r.rank} className={`achievement-row leaderboard-row rank-${r.rank}${isMe ? ' is-me' : ''}`}>
+            <span className={`leaderboard-rank${r.rank <= 3 ? ' is-medal' : ''}`}>
               {MEDALS[r.rank - 1] ?? r.rank}
             </span>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
-                          background: 'var(--well)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          border: '1px solid var(--line-strong)' }}>
+            <div className="leaderboard-avatar">
               {url
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={url} alt="" style={{ width: '100%', height: '100%' }} />
-                : <span className="cinzel" style={{ fontSize: 14 }}>{r.username?.[0] ?? '?'}</span>}
+                ? <img src={url} alt="" />
+                : <span>{r.username?.[0] ?? '?'}</span>}
             </div>
-            <div style={{ flex: 1 }}>
-              <div className="cinzel" style={{ fontSize: 13,
-                   color: isMe ? 'var(--gold-hi)' : undefined }}>
+            <div className="leaderboard-identity">
+              <strong>
                 {r.username}{isMe ? ' (vous)' : ''}
-              </div>
-              <div className="dim" style={{ fontSize: 12 }}>
+              </strong>
+              <span>
                 {r.games} partie{r.games > 1 ? 's' : ''} · {r.winRate}% victoires
                 {r.kills > 0 ? ` · ${r.kills} élim.` : ''}
                 {r.saves > 0 ? ` · ${r.saves} soins` : ''}
+              </span>
+            </div>
+            <div className="leaderboard-scores">
+              <div className="leaderboard-score elo">
+                <strong>{r.elo ?? 1000}</strong>
+                <span>ELO</span>
+              </div>
+              <div className="leaderboard-score wins">
+                <strong>{r.wins}</strong>
+                <span>VICTOIRES</span>
               </div>
             </div>
-            <span className="cinzel" style={{ color: 'var(--blue, #6aa5d8)', fontSize: 16, marginRight: 14 }}>
-              {r.elo ?? 1000} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>ELO</span>
-            </span>
-            <span className="cinzel" style={{ color: 'var(--gold-hi)', fontSize: 16 }}>
-              {r.wins} <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>victoires</span>
-            </span>
           </div>
         );
       })}

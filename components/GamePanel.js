@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
+import RoleIcon from '@/components/RoleIcon';
 
 const ROLE_LABELS = {
   CITIZEN: 'Citoyen', MAFIOSO: 'Mafioso', SHERIFF: 'Shérif', DETECTIVE: 'Détective',
@@ -196,7 +197,7 @@ function RolesTab({ myRole }) {
         return (
           <article key={r.key} className={`dossier-role-card ${mine ? 'mine' : ''}`} style={{ '--guide-color': r.color }}>
             <div className="dossier-role-card-head">
-              <span>{r.emoji}</span>
+              <RoleIcon roleKey={r.key} className="dossier-role-art" />
               <div>
                 <small>CAMP {r.team}</small>
                 <h3>{r.name}</h3>

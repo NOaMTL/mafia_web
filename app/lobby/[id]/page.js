@@ -8,6 +8,7 @@ import { getAvatarMap } from '@/lib/avatars';
 import ConnectionBanner from '@/components/ConnectionBanner';
 import BrandMark from '@/components/BrandMark';
 import PageHeading from '@/components/PageHeading';
+import RoleIcon from '@/components/RoleIcon';
 import { ROLE_GUIDE, ROLE_DISTRIBUTIONS } from '@/lib/roleGuide';
 
 export default function LobbyWait() {
@@ -37,7 +38,9 @@ export default function LobbyWait() {
 
     const refresh = () => api.getLobby(id).then(setLobby).catch(() => {});
 
-    socket.on('lobby:joined',        (d) => setLobby(d.lobby));
+    // La jonction a réussi : on efface toute bannière d'erreur transitoire
+    // (ex. un lobby:join parti avant la fin de l'authentification du socket).
+    socket.on('lobby:joined',        (d) => { setLobby(d.lobby); setError(''); });
     socket.on('lobby:player_joined', refresh);
     socket.on('lobby:player_ready',  refresh);
     socket.on('lobby:bot_added',     refresh);
@@ -45,9 +48,12 @@ export default function LobbyWait() {
     socket.on('game:started',        (d) => router.push(`/game/${d.gameId}`));
     socket.on('error',               (d) => setError(d.message ?? 'Erreur'));
 
+    // Un seul lobby:join par connexion : si le socket est déjà connecté on
+    // émet tout de suite, sinon on attend 'connect' (émettre avant mettait le
+    // message en file et il partait pendant l'authentification → erreur).
     const join = () => socket.emit('lobby:join', { lobbyId: id });
-    socket.on('connect', join); // auto re-join on reconnection
-    join();
+    socket.on('connect', join); // aussi les reconnexions
+    if (socket.connected) join();
     refresh();
 
     return () => {
@@ -157,7 +163,12 @@ export default function LobbyWait() {
         <section className="card lobby-player-card lobby-player-list-card">
           <header className="lobby-card-heading">
             <div><small>TABLE DE JEU · PARTICIPANTS</small><h2>JOUEURS DE LA PARTIE</h2></div>
-            <span>{readyCount}/{players.length} PRÊTS</span>
+            <div className="lobby-heading-tools">
+              <span>{readyCount}/{players.length} PRÊTS</span>
+              {session.userId === lobby.hostId && players.length < maxPlayers && (
+                <button className="lobby-addbot-top" onClick={addBot}>+ BOT</button>
+              )}
+            </div>
           </header>
 
           <div className="lobby-player-list">
@@ -202,15 +213,20 @@ export default function LobbyWait() {
             <button className={ready ? 'danger' : 'primary'} onClick={toggleReady}>
               {ready ? 'ANNULER — JE NE SUIS PLUS PRÊT' : '✓ JE SUIS PRÊT'}
             </button>
-            {session.userId === lobby.hostId && <button onClick={addBot}>+ AJOUTER UN BOT</button>}
-            {session.userId === lobby.hostId && players.length >= 4 && (
-              <button className="primary" onClick={startNow}
-                      title={readyCount < players.length
-                        ? `${players.length - readyCount} joueur(s) pas encore prêt(s) — lancement forcé`
-                        : 'Tout le monde est prêt'}>
-                ▶ LANCER LA PARTIE
-              </button>
-            )}
+            {session.userId === lobby.hostId && (() => {
+              const allReady = players.length >= 4 && readyCount === players.length;
+              const hint = players.length < 4
+                ? `Encore ${4 - players.length} joueur${4 - players.length > 1 ? 's' : ''} pour lancer`
+                : allReady ? 'Tout le monde est prêt !'
+                : `En attente de ${players.length - readyCount} joueur${players.length - readyCount > 1 ? 's' : ''}…`;
+              return (
+                <button className="lobby-launch-btn" disabled={!allReady}
+                        onClick={startNow} title={hint}>
+                  <strong>▶ LANCER LA PARTIE</strong>
+                  <small>{hint}</small>
+                </button>
+              );
+            })()}
           </div>
         </section>
 
@@ -260,7 +276,7 @@ export default function LobbyWait() {
 function LobbyRoleCard({ role }) {
   return (
     <article className="lobby-role-card" style={{ '--role-color': role.color }}>
-      <span className="role-emoji">{role.emoji}</span>
+      <RoleIcon roleKey={role.key} className="role-emoji" />
       <div><strong>{role.name}</strong><small>{role.nightAction ? 'ACTION NOCTURNE' : 'POUVOIR PASSIF'}</small></div>
       {role.count > 1 && <b className="role-quantity">×{role.count}</b>}
     </article>

@@ -7,10 +7,10 @@ import { api, getSession } from '@/lib/api';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
+import RoleIcon from '@/components/RoleIcon';
 
 const ROLE_BY_KEY = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r]));
 const roleName  = (k) => ROLE_BY_KEY[k]?.name ?? k ?? '?';
-const roleEmoji = (k) => ROLE_BY_KEY[k]?.emoji ?? '❓';
 
 const PHASE_MARKERS = {
   NIGHT:          { icon: '🌙', text: 'La nuit tombe sur la ville' },
@@ -43,7 +43,7 @@ function describeEvent(ev, nameOf) {
     case 'NIGHT_ACTION': {
       const verb = NIGHT_ACTION_TEXT[d.role] ?? 'agit sur';
       const suffix = d.secondaryTargetId ? ` et ${nameOf(d.secondaryTargetId)}` : '';
-      return { kind: 'night', icon: roleEmoji(d.role),
+      return { kind: 'night', roleKey: d.role,
                text: `${actor} (${roleName(d.role)}) ${verb} ${target}${suffix}.` };
     }
     case 'PLAYERS_REDIRECTED':
@@ -144,7 +144,7 @@ export default function GameDetailPage() {
 
   const rosterRow = (p) => (
     <div key={p.userId} className={`hd-player ${p.isAlive ? '' : 'hd-dead'}`}>
-      <span className="hd-emoji">{roleEmoji(p.role)}</span>
+      <RoleIcon roleKey={p.role} className="hd-role-art" />
       <div className="hd-player-main">
         <div className="hd-player-name">
           {p.username}{p.isBot ? <span className="hd-bot">BOT</span> : null}
@@ -220,7 +220,9 @@ export default function GameDetailPage() {
                 <div className="hd-round-badge">TOUR {r.round}</div>
                 {r.lines.map((l) => (
                   <div key={l.id} className={`hd-line hd-${l.kind}`}>
-                    <span className="hd-line-icon">{l.icon}</span>
+                    {l.roleKey
+                      ? <RoleIcon roleKey={l.roleKey} className="hd-line-icon hd-event-role-art" />
+                      : <span className="hd-line-icon">{l.icon}</span>}
                     <span>{l.text}</span>
                   </div>
                 ))}

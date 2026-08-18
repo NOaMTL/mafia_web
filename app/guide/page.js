@@ -5,6 +5,7 @@ import { getSession } from '@/lib/api';
 import { ROLE_GUIDE, PHASE_GUIDE, ROLE_DISTRIBUTIONS, ROLE_MECHANICS, WIN_CONDITIONS } from '@/lib/roleGuide';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
+import RoleIcon from '@/components/RoleIcon';
 
 export default function GuidePage() {
   const [session, setSession] = useState(null);
@@ -19,9 +20,16 @@ export default function GuidePage() {
   useEffect(() => {
     if (!openRole) return;
     const onKey = (e) => e.key === 'Escape' && setOpenRole(null);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
   }, [openRole]);
+
+  const openRoleFacts = openRole ? (ROLE_MECHANICS[openRole.key] ?? []) : [];
 
   return (
     <main className="page meta-page guide-page">
@@ -50,23 +58,34 @@ export default function GuidePage() {
                 <p>{group.sub}</p>
               </header>
               <div className="role-guide-grid">
-                {ROLE_GUIDE.filter((r) => r.team === group.team).map((r) => (
+                {ROLE_GUIDE.filter((r) => r.team === group.team).map((r, index) => (
                   <article key={r.key} className="role-guide-card clickable" style={{ '--role-color': r.color }}
                            role="button" tabIndex={0}
                            title="Voir les mécaniques détaillées"
                            onClick={() => setOpenRole(r)}
-                           onKeyDown={(e) => e.key === 'Enter' && setOpenRole(r)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                      <span className="role-guide-icon">{r.emoji}</span>
-                      <div>
+                           onKeyDown={(e) => {
+                             if (e.key === 'Enter' || e.key === ' ') {
+                               e.preventDefault();
+                               setOpenRole(r);
+                             }
+                           }}>
+                    <img className="role-guide-card-art" src={r.image} alt="" loading="lazy" decoding="async" />
+                    <div className="role-guide-card-overlay">
+                      <div className="role-guide-card-topline">
+                        <span><i />{r.team === 'MAFIA' ? 'MAFIA' : 'VILLE'}</span>
+                        <b>{String(index + 1).padStart(2, '0')}</b>
+                      </div>
+                      <div className="role-guide-card-copy">
+                        <div className="role-guide-card-kicker">DOSSIER DE RÔLE</div>
                         <h2>{r.name}</h2>
-                        <div className="role-team-label">CAMP {r.team}</div>
+                        <p>{r.description}</p>
+                        <div className="role-guide-card-power">
+                          <span>{r.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</span>
+                          <strong>{r.nightAction ?? r.tip}</strong>
+                        </div>
+                        <div className="role-more"><span>OUVRIR LE DOSSIER</span><b>→</b></div>
                       </div>
                     </div>
-                    <p>{r.description}</p>
-                    {r.nightAction && <div className="role-detail">NUIT · {r.nightAction}</div>}
-                    <div className="role-tip">CONSEIL · {r.tip}</div>
-                    <div className="role-more">MÉCANIQUES DÉTAILLÉES →</div>
                   </article>
                 ))}
               </div>
@@ -78,32 +97,69 @@ export default function GuidePage() {
       {/* ── Modale : mécaniques détaillées du rôle ── */}
       {openRole && (
         <div className="role-modal-backdrop" onClick={() => setOpenRole(null)}>
-          <div className="role-modal" style={{ '--role-color': openRole.color }}
-               onClick={(e) => e.stopPropagation()}>
-            <header>
-              <span className="role-guide-icon big">{openRole.emoji}</span>
-              <div>
-                <h2>{openRole.name}</h2>
-                <div className="role-team-label">CAMP {openRole.team}</div>
+          <section className="role-modal" style={{ '--role-color': openRole.color }}
+                   role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
+                   onClick={(e) => e.stopPropagation()}>
+            <button className="role-modal-close" aria-label="Fermer le dossier"
+                    onClick={() => setOpenRole(null)}>✕</button>
+
+            <div className="role-modal-visual">
+              <img src={openRole.image} alt="" />
+              <div className="role-modal-visual-shade" />
+              <div className="role-modal-visual-top">
+                <span className="role-modal-team"><i />{openRole.team === 'MAFIA' ? 'MAFIA' : 'VILLE'}</span>
+                <span>ARCHIVES · {openRole.key}</span>
               </div>
-              <button className="role-modal-close" aria-label="Fermer"
-                      onClick={() => setOpenRole(null)}>✕</button>
-            </header>
-            <p className="role-modal-desc">{openRole.description}</p>
-            {openRole.nightAction && <div className="role-detail">NUIT · {openRole.nightAction}</div>}
-            <div className="role-facts">
-              {(ROLE_MECHANICS[openRole.key] ?? []).map((f, i) => (
-                <div key={i} className="role-fact">
-                  <span className="role-fact-icon">{f.icon}</span>
-                  <div>
-                    <div className="role-fact-title">{f.title}</div>
-                    <div className="role-fact-text">{f.text}</div>
-                  </div>
+              <div className="role-modal-visual-signature">
+                <RoleIcon roleKey={openRole.key} className="role-modal-emblem" />
+                <div>
+                  <small>DOSSIER CONFIDENTIEL</small>
+                  <strong>{openRole.name}</strong>
                 </div>
-              ))}
+              </div>
             </div>
-            <div className="role-tip">CONSEIL · {openRole.tip}</div>
-          </div>
+
+            <div className="role-modal-content">
+              <header className="role-modal-header">
+                <span className="role-modal-eyebrow">PROFIL DU RÔLE</span>
+                <h2 id="role-modal-title">{openRole.name}</h2>
+                <p className="role-modal-desc">{openRole.description}</p>
+              </header>
+
+              <div className={`role-modal-mission ${openRole.nightAction ? 'night' : 'passive'}`}>
+                <span className="role-modal-mission-icon">{openRole.nightAction ? '☾' : '◇'}</span>
+                <div>
+                  <small>{openRole.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</small>
+                  <strong>{openRole.nightAction ?? 'Aucune action à effectuer pendant la nuit.'}</strong>
+                </div>
+              </div>
+
+              <div className="role-modal-section-title">
+                <span>MÉCANIQUES & INTERACTIONS</span>
+                <b>{String(openRoleFacts.length).padStart(2, '0')}</b>
+              </div>
+              <div className="role-facts">
+                {openRoleFacts.map((f, i) => (
+                  <div key={i} className="role-fact">
+                    <span className="role-fact-number">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="role-fact-icon">{f.icon}</span>
+                    <div>
+                      <div className="role-fact-title">{f.title}</div>
+                      <div className="role-fact-text">{f.text}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <aside className="role-modal-tip">
+                <span>♟</span>
+                <div>
+                  <small>CONSEIL STRATÉGIQUE</small>
+                  <p>{openRole.tip}</p>
+                </div>
+              </aside>
+            </div>
+          </section>
         </div>
       )}
 
@@ -153,7 +209,12 @@ export default function GuidePage() {
             const town = roles.filter((key) => !mafia.includes(key));
             const renderRole = (key, index) => {
               const role = ROLE_GUIDE.find((r) => r.key === key);
-              return <span key={`${key}-${index}`} className={`distribution-role ${role?.team?.toLowerCase()}`}>{role?.emoji} {role?.name ?? key}</span>;
+              return (
+                <span key={`${key}-${index}`} className={`distribution-role ${role?.team?.toLowerCase()}`}>
+                  <RoleIcon roleKey={key} className="distribution-role-art" />
+                  {role?.name ?? key}
+                </span>
+              );
             };
             return (
               <div key={count} className="distribution-row">

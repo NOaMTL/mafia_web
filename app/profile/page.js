@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { api, getSession } from '@/lib/api';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
+import RoleIcon from '@/components/RoleIcon';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
 
 const ROLE_LABELS = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.name]));
-const ROLE_EMOJI  = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.emoji]));
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function ProfilePage() {
                   {Object.entries(stats.byRole).map(([role, r]) => (
                     <div key={role} style={{ display: 'flex', justifyContent: 'space-between',
                                              padding: '6px 4px', fontSize: 14 }}>
-                      <span>{ROLE_EMOJI[role]} {ROLE_LABELS[role] ?? role}</span>
+                      <span className="profile-role-label"><RoleIcon roleKey={role} className="profile-role-art" /> {ROLE_LABELS[role] ?? role}</span>
                       <span className="dim">{r.wins}/{r.played} victoires</span>
                     </div>
                   ))}
@@ -114,7 +114,7 @@ export default function ProfilePage() {
                  title={h.gameId ? 'Voir le déroulé complet de cette partie' : 'Partie jouée avant l’archivage détaillé'}
                  onClick={() => h.gameId && router.push(`/history/${h.gameId}`)}
                  onKeyDown={(e) => e.key === 'Enter' && h.gameId && router.push(`/history/${h.gameId}`)}>
-              <span className="emoji">{ROLE_EMOJI[h.role] ?? '❓'}</span>
+              <RoleIcon roleKey={h.role} className="history-role-art" />
               <div style={{ flex: 1 }}>
                 <div className="cinzel" style={{ fontSize: 16 }}>
                   {ROLE_LABELS[h.role] ?? h.role}
