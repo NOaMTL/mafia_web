@@ -149,6 +149,9 @@ export default function GamePage() {
   const [verdictSlate, setVerdictSlate] = useState(null); // mise en scène du verdict
   const [dayFeed, setDayFeed] = useState([]);             // fil des événements
   const [coachSeen, setCoachSeen] = useState(null);       // onboarding (null = pas chargé)
+  const [intelLog, setIntelLog] = useState([]);           // résultats persistants des actions
+  const [intelOpen, setIntelOpen] = useState(false);
+  const intelSeenCount = useRef(0);
   const phaseSlateTimer = useRef(null);
   const verdictTimers = useRef([]);
   const [topMenuOpen, setTopMenuOpen] = useState(false); // menu ☰ mobile
@@ -385,7 +388,11 @@ export default function GamePage() {
     const revealNight = (icon, title, message, tone = 'info') => {
       setNightReveal({ id: Date.now(), icon, title, message, tone });
       clearTimeout(nightRevealTimer.current);
-      nightRevealTimer.current = setTimeout(() => setNightReveal(null), 3600);
+      nightRevealTimer.current = setTimeout(() => setNightReveal(null), 5200);
+      // Le popup est éphémère — le carnet de renseignements, lui, garde tout.
+      setIntelLog((prev) => [...prev.slice(-39), {
+        id: Date.now() + Math.random(), icon, title, message, tone, round: roundRef.current,
+      }]);
       sounds.paper();
     };
     const onDet      = (d) => { setDetective({ ...d, kind: 'team' }); revealNight('⭐', 'RÉSULTAT DE L’INTERROGATOIRE', `${d.targetUsername} paraît ${d.team === 'MAFIA' ? 'suspect' : 'non suspect'}.`, d.team === 'MAFIA' ? 'danger' : 'town'); };
@@ -1496,6 +1503,46 @@ export default function GamePage() {
           teammates={mafiaTeammates}
           onClose={() => setRoleCardOpen(false)}
         />
+      )}
+
+      {/* ── Carnet de renseignements : résultats persistants des actions ── */}
+      {intelLog.length > 0 && (
+        <>
+          <button type="button"
+                  className={`intel-tab ${intelOpen ? 'open' : ''}`}
+                  onClick={() => {
+                    setIntelOpen((open) => {
+                      if (!open) intelSeenCount.current = intelLog.length;
+                      return !open;
+                    });
+                  }}>
+            🗂
+            {!intelOpen && intelLog.length > intelSeenCount.current && (
+              <b className="intel-badge">{intelLog.length - intelSeenCount.current}</b>
+            )}
+            <small>INTEL</small>
+          </button>
+          {intelOpen && (
+            <aside className="intel-drawer" aria-label="Résultats de vos actions">
+              <header>
+                <strong>🗂 RENSEIGNEMENTS</strong>
+                <span>{intelLog.length} rapport{intelLog.length > 1 ? 's' : ''}</span>
+                <button onClick={() => setIntelOpen(false)} aria-label="Fermer">✕</button>
+              </header>
+              <div className="intel-list">
+                {[...intelLog].reverse().map((entry) => (
+                  <article key={entry.id} className={`intel-entry tone-${entry.tone}`}>
+                    <span className="intel-icon">{entry.icon}</span>
+                    <div>
+                      <div className="intel-title">{entry.title} <b>N{entry.round}</b></div>
+                      <p>{entry.message}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </aside>
+          )}
+        </>
       )}
 
       {/* ── Onboarding première partie : coach marks une seule fois ── */}

@@ -9542,3 +9542,106 @@ html[data-theme="light"] .user-menu-item small { color: rgba(48,34,14,.58); }
   text-shadow: 0 4px 24px rgba(0, 0, 0, .7);
 }
 .accused-stand p { font-size: 12px; margin-top: 8px; }
+
+/* ── Carnet de renseignements (résultats persistants des actions) ─────────── */
+.intel-tab {
+  position: fixed;
+  right: 0;
+  top: 42%;
+  z-index: 260;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 9px;
+  border: 1px solid rgba(210, 167, 82, .5);
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  background: rgba(6, 8, 12, .94);
+  color: #e9bc5d;
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow: -6px 0 22px rgba(0, 0, 0, .4);
+}
+.intel-tab small { font-size: 8px; letter-spacing: 1.5px; font-weight: 800; }
+.intel-tab.open { opacity: 0; pointer-events: none; }
+.intel-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  min-width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #b23a2c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 5px;
+}
+.intel-drawer {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 320;
+  width: min(360px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 8, 12, .97);
+  border-left: 1px solid rgba(210, 167, 82, .4);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, .55);
+  animation: intelIn .25s ease;
+}
+@keyframes intelIn { from { transform: translateX(40px); opacity: 0; } }
+.intel-drawer header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.intel-drawer header strong {
+  flex: 1;
+  font-family: var(--font-cinzel, serif);
+  font-size: 13.5px;
+  letter-spacing: 2px;
+  color: #e9bc5d;
+}
+.intel-drawer header span { font-size: 11px; color: rgba(255, 255, 255, .45); }
+.intel-drawer header button {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .2);
+  background: transparent;
+  color: rgba(255, 255, 255, .6);
+  cursor: pointer;
+}
+.intel-list { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.intel-entry {
+  display: flex;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-left: 3px solid #4c91bd;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .025);
+}
+.intel-entry.tone-danger { border-left-color: #d05c4c; }
+.intel-entry.tone-mafia  { border-left-color: #9c53c4; }
+.intel-entry.tone-town   { border-left-color: #42a86b; }
+.intel-icon { font-size: 19px; flex: none; }
+.intel-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, .85);
+  margin-bottom: 3px;
+}
+.intel-title b { color: rgba(255, 255, 255, .38); font-size: 10px; margin-left: 5px; }
+.intel-entry p { margin: 0; font-size: 13.5px; line-height: 1.45; color: rgba(255, 255, 255, .78); }
+
+@media (max-width: 760px) {
+  .intel-tab { top: auto; bottom: calc(140px + env(safe-area-inset-bottom)); }
+}
