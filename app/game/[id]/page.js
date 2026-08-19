@@ -146,6 +146,7 @@ export default function GamePage() {
   const [nightMsg, setNightMsg]   = useState('');
   const [skipInfo, setSkipInfo]   = useState(null);   // { count, total, voterIds }
   const [mayorRevealedBy, setMayorRevealedBy] = useState(null); // username du Maire révélé
+  const [mayorRevealConfirm, setMayorRevealConfirm] = useState(false);
   const [will, setWill]           = useState('');
   const [offline, setOffline]     = useState([]);     // userIds momentarily disconnected
   const [toasts, setToasts]       = useState([]);
@@ -315,7 +316,10 @@ export default function GamePage() {
       setPhase(d.phase); phaseRef.current = d.phase; setRound(d.round ?? 1);
       if (d.endAt)   setEndAt(d.endAt);
       if (d.startAt) setStartAt(d.startAt);
-      if (d.players) setPlayers(d.players);
+      if (d.players) {
+        setPlayers(d.players);
+        setMayorRevealedBy(d.players.find((player) => player.mayorRevealed)?.username ?? null);
+      }
       if (d.votes) setVotes(d.votes);
     };
     const onPhase = (d) => {
@@ -334,6 +338,7 @@ export default function GamePage() {
       setEndAt(d.endAt ?? 0);
       setStartAt(d.startAt ?? 0);
       setSkipInfo(null);
+      if (!DAY_PHASES.includes(d.phase)) setMayorRevealConfirm(false);
       if (d.phase === 'NIGHT') {
         setNightTarget(null); setNightSecondaryTarget(null); setActionConfirmed(false);
         setActionFeedback(null); setActionFlash(null);
@@ -352,7 +357,10 @@ export default function GamePage() {
       }
     };
     const onPublic   = (d) => {
-      if (d?.players) setPlayers(d.players);
+      if (d?.players) {
+        setPlayers(d.players);
+        setMayorRevealedBy(d.players.find((player) => player.mayorRevealed)?.username ?? null);
+      }
       if (d?.votes) setVotes(d.votes);
     };
     const onRole     = (d) => setRole(d);
@@ -521,9 +529,11 @@ export default function GamePage() {
     socket.on('game:over',                onOver);
     socket.on('mayor:revealed',           (d) => {
       setMayorRevealedBy(d.username);
-      addLog('🏛️', `${d.username} se révèle : MAIRE — son vote compte double.`);
+      setMayorRevealConfirm(false);
+      setPlayers((current) => current.map((player) => player.userId === d.userId ? { ...player, mayorRevealed: true } : player));
+      addLog('🏛️', `${d.username} se révèle : MAIRE — son vote compte ×${d.voteWeight ?? 3}.`);
       pushFeed('🏛️', `${d.username} = Maire`);
-      toast(`🏛️ ${d.username} est le MAIRE — son vote compte désormais double.`);
+      toast(`🏛️ ${d.username} est le MAIRE — son vote compte désormais ×${d.voteWeight ?? 3}.`);
     });
     socket.on('mafia:promotion',          (d) => {
       addLog('🔪', d.isYou
@@ -1234,6 +1244,11 @@ export default function GamePage() {
             skipRequired={skipRequired}
             hasSkipped={hasSkipped}
             onSkipPhase={() => send('phase:skip_vote', {})}
+            mayorRevealed={Boolean(mayorRevealedBy)}
+            mayorRevealConfirm={mayorRevealConfirm}
+            onAskMayorReveal={() => setMayorRevealConfirm(true)}
+            onCancelMayorReveal={() => setMayorRevealConfirm(false)}
+            onConfirmMayorReveal={() => send('mayor:reveal', {})}
           />
           <DossierQuickAccess
             onOpen={() => {
@@ -1331,6 +1346,7 @@ export default function GamePage() {
                 <div className="seat-name">
                   {p.username}{isOffline ? ' 📡' : ''}
                 </div>
+                {p.mayorRevealed && <div className="seat-mayor-badge">🏛️ MAIRE · ×3</div>}
                 {phase === 'DAY_VOTE' && voteCount > 0 && p.isAlive && (
                   <div className="seat-votes">{voteCount} vote{voteCount > 1 ? 's' : ''}</div>
                 )}
@@ -1367,19 +1383,6 @@ export default function GamePage() {
               </div>
             )}
 
-            {role?.role === 'MAYOR' && isAlive && !mayorRevealedBy &&
-              DAY_PHASES.includes(phase) && (
-              <button className="primary" style={{ padding: '14px 20px' }}
-                      title="Révélez-vous publiquement : votre vote comptera double."
-                      onClick={() => {
-                        if (confirm('Se révéler comme MAIRE ? Toute la ville le saura, et votre vote comptera double.')) {
-                          send('mayor:reveal', {});
-                        }
-                      }}>
-                🏛️ SE RÉVÉLER
-              </button>
-            )}
-
           </div>
         </div>
 
@@ -1401,6 +1404,7 @@ export default function GamePage() {
                   {p.isBot && <span className="bot-chip">BOT</span>}
                 </span>
                 {mafiaTeammateIds.has(p.userId) && <span className="mafia-mate-badge">MAFIA</span>}
+                {p.mayorRevealed && <span className="mayor-public-badge">🏛️ MAIRE · VOTE ×3</span>}
                 {p.roleHidden && <span className="cleaned-badge">NETTOYÉ</span>}
                 {!p.isAlive && p.role && (
                   <span className="dead-role-chip"><RoleIcon roleKey={p.role} className="dead-role-art" /> {ROLE_LABELS[p.role] ?? p.role}</span>
@@ -1603,11 +1607,37 @@ function NightVideoBackdrop({ disabled = false, contained = false }) {
   );
 }
 
+function MayorRevealControl({ revealed, confirming, onAsk, onCancel, onConfirm }) {
+  return (
+    <section className={`mayor-reveal-control ${revealed ? 'is-active' : ''} ${confirming ? 'is-confirming' : ''}`} aria-label="Pouvoir du Maire">
+      <span className="mayor-reveal-seal" aria-hidden="true">🏛️</span>
+      <div className="mayor-reveal-copy">
+        <small>POUVOIR UNIQUE · MAIRE</small>
+        <strong>{revealed ? 'AUTORITÉ PUBLIQUE ACTIVE' : confirming ? 'RÉVÉLATION IRRÉVERSIBLE' : 'RÉVÉLER TON IDENTITÉ'}</strong>
+        <span>{revealed ? 'Tes bulletins valent désormais trois voix.' : confirming ? 'Toute la ville connaîtra ton rôle.' : 'Deviens public et renforce chacun de tes votes.'}</span>
+      </div>
+      {revealed ? (
+        <div className="mayor-reveal-active"><i /> ACTIF <b>VOTE ×3</b></div>
+      ) : confirming ? (
+        <div className="mayor-reveal-confirm-actions">
+          <button type="button" className="mayor-confirm-button" onClick={onConfirm}>CONFIRMER <b>×3</b></button>
+          <button type="button" className="mayor-cancel-button" onClick={onCancel} aria-label="Annuler la révélation">ANNULER</button>
+        </div>
+      ) : (
+        <button type="button" className="mayor-reveal-button" onClick={onAsk}>
+          <span>SE RÉVÉLER</span><b>VOTE ×3</b>
+        </button>
+      )}
+    </section>
+  );
+}
+
 function PhaseCenterStage({
   phase, round, remaining, role, players, avatarMap, sessionId, isAlive,
   nightTarget, nightSecondaryTarget, actionConfirmed, actionFeedback, canTargetPlayer, clickPlayer, onVeteranAlert, mafiaTeammateIds,
   gazetteNow, nightMsg, detective, trial, sentence, votes, myVote, myVerdict,
   judgment, castVerdict, skipInfo, skipRequired, hasSkipped, onSkipPhase,
+  mayorRevealed, mayorRevealConfirm, onAskMayorReveal, onCancelMayorReveal, onConfirmMayorReveal,
 }) {
   const timer = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
   const living = players.filter((player) => player.isAlive);
@@ -1628,7 +1658,7 @@ function PhaseCenterStage({
     return (
       <button
         key={player.userId}
-        className={`phase-player-option mode-${mode} ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''}`}
+        className={`phase-player-option mode-${mode} ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''} ${player.mayorRevealed ? 'mayor-revealed' : ''}`}
         disabled={!enabled}
         onClick={() => enabled && clickPlayer(player)}
       >
@@ -1638,7 +1668,7 @@ function PhaseCenterStage({
             ? <img src={avatarUrl} alt="" />
             : (player.isBot ? '🤖' : player.username?.[0]?.toUpperCase())}
         </span>
-        <span><b>{player.username}</b><small>{player.userId === sessionId ? 'VOUS' : teammate ? 'ALLIÉ MAFIA' : mode === 'vote' ? 'ACCUSER' : 'VIVANT'}</small></span>
+        <span><b>{player.username}</b><small>{player.mayorRevealed ? '🏛️ MAIRE · VOTE ×3' : player.userId === sessionId ? 'VOUS' : teammate ? 'ALLIÉ MAFIA' : mode === 'vote' ? 'ACCUSER' : 'VIVANT'}</small></span>
         <i>{mode === 'vote' && voteCount ? voteCount : selectionOrder ?? (selected ? '✓' : '›')}</i>
       </button>
     );
@@ -1743,7 +1773,7 @@ function PhaseCenterStage({
                 </div>
               </div>
             ) : role?.role === 'MAYOR' && isAlive ? (
-              <div className="night-passive-state"><span className="stage-hourglass">🏛️</span><small>AUCUNE ACTION NOCTURNE</small><h3>TON POUVOIR EST DIURNE</h3><p>Tu peux te révéler publiquement pendant le jour : ton vote comptera alors double, définitivement.</p></div>
+              <div className="night-passive-state"><span className="stage-hourglass">🏛️</span><small>AUCUNE ACTION NOCTURNE</small><h3>TON POUVOIR EST DIURNE</h3><p>Tu peux te révéler publiquement pendant le jour : ton vote comptera alors triple, définitivement.</p></div>
             ) : (
               <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>AUCUNE ACTION ACTIVE</small><h3>OBSERVE ET PRÉPARE-TOI</h3><p>Ton rôle agira pendant une autre phase ou dispose d’un pouvoir passif. Profite de la nuit pour rédiger ton testament.</p></div>
             )}
@@ -1787,6 +1817,15 @@ function PhaseCenterStage({
             <small>PLACE PUBLIQUE · JOUR {round}</small>
             <h1>DISCUSSION EN COURS</h1>
             <p>Le village débat jusqu’à la fin du temps imparti.</p>
+            {role?.role === 'MAYOR' && isAlive && (
+              <MayorRevealControl
+                revealed={mayorRevealed}
+                confirming={mayorRevealConfirm}
+                onAsk={onAskMayorReveal}
+                onCancel={onCancelMayorReveal}
+                onConfirm={onConfirmMayorReveal}
+              />
+            )}
             {isAlive && (
               <div className={`discussion-skip-vote ${hasSkipped ? 'voted' : ''}`}>
                 <div className="discussion-skip-copy">
@@ -1816,7 +1855,7 @@ function PhaseCenterStage({
         <header className="phase-stage-heading"><div><small>JOUR {round} · LA PLACE PUBLIQUE</small><h2>QUI DEVRA RÉPONDRE DEVANT LA VILLE ?</h2></div><time><small>LA FOULE TRANCHE DANS</small>{timer}</time></header>
         <div className="vote-stage-layout">
           <div className="vote-candidates">{living.map((player) => playerOption(player, 'vote'))}</div>
-          <aside className="ballot-booth"><span className="vote-box-icon">🗳️</span><small>TON BULLETIN</small><h3>{myVote ? 'TA VOIX EST DÉPOSÉE' : 'LA VILLE ATTEND TON CHOIX'}</h3><p>{myVote ? 'Tant que la cloche n’a pas sonné, tu peux encore changer d’avis.' : 'Désigne celui qui devra se défendre devant tous.'}</p><div className="ballot-status">{myVote ? <><span>ACCUSATION</span><strong>{players.find((player) => player.userId === myVote)?.username}</strong></> : <><span>BULLETIN VIERGE</span><strong>—</strong></>}</div></aside>
+          <aside className="ballot-booth"><span className="vote-box-icon">🗳️</span><small>TON BULLETIN</small><h3>{myVote ? 'TA VOIX EST DÉPOSÉE' : 'LA VILLE ATTEND TON CHOIX'}</h3><p>{myVote ? 'Tant que la cloche n’a pas sonné, tu peux encore changer d’avis.' : 'Désigne celui qui devra se défendre devant tous.'}</p><div className="ballot-status">{myVote ? <><span>ACCUSATION</span><strong>{players.find((player) => player.userId === myVote)?.username}</strong></> : <><span>BULLETIN VIERGE</span><strong>—</strong></>}</div>{role?.role === 'MAYOR' && isAlive && <MayorRevealControl revealed={mayorRevealed} confirming={mayorRevealConfirm} onAsk={onAskMayorReveal} onCancel={onCancelMayorReveal} onConfirm={onConfirmMayorReveal} />}</aside>
         </div>
       </section>
     );

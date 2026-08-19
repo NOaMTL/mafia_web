@@ -207,12 +207,21 @@ export default function LobbyWait() {
                     {isHost && <b className="host">♛ HÔTE</b>}
                     {player.isBot && <b>BOT</b>}
                   </span>
-                  <span className={`lobby-ready-state ${player.isReady ? 'ready' : ''}`}><i />{player.isReady ? 'PRÊT' : 'EN ATTENTE'}</span>
-                  {session.userId === lobby.hostId && !isMe && (
-                    <button className="lobby-kick-btn"
-                            title={`Exclure ${player.username}`}
-                            onClick={() => kickPlayer(player)}>✕</button>
-                  )}
+                  <span className="lobby-player-actions">
+                    <span className={`lobby-ready-state ${player.isReady ? 'ready' : ''}`}><i />{player.isReady ? 'PRÊT' : 'EN ATTENTE'}</span>
+                    {session.userId === lobby.hostId && !isMe && (
+                      <button
+                        type="button"
+                        className={`lobby-kick-btn ${player.isBot ? 'is-bot' : 'is-player'}`}
+                        title={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
+                        aria-label={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
+                        onClick={() => kickPlayer(player)}
+                      >
+                        <span aria-hidden="true">−</span>
+                        <b>{player.isBot ? 'RETIRER' : 'EXCLURE'}</b>
+                      </button>
+                    )}
+                  </span>
                 </article>
               );
             })}

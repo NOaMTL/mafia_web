@@ -187,7 +187,7 @@ function describeEvent(event, nameOf) {
     case 'MAYOR_REVEAL':
       return {
         kind: 'intel', icon: '🏛️', roleKey: 'MAYOR', tone: 'town', title: 'Le Maire se révèle',
-        text: `${actor} révèle publiquement son rôle de Maire. Son vote compte désormais double.`,
+        text: `${actor} révèle publiquement son rôle de Maire. Son vote compte désormais triple.`,
         participants: [participant(event.actorId, 'MAIRE')],
       };
     case 'EVIDENCE_ADDED':

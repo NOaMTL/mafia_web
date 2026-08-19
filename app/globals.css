@@ -2111,6 +2111,140 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   font-family: 'Inter', sans-serif;
   font-size: 10px;
 }
+
+/* ── Mayor reveal: visible civic power, anchored with the day actions ── */
+.mayor-reveal-control {
+  position: relative;
+  display: grid;
+  width: min(350px, 46vw);
+  min-height: 58px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(223, 176, 83, .56);
+  border-radius: 4px;
+  padding: 7px 8px;
+  background:
+    linear-gradient(105deg, rgba(91, 61, 16, .34), rgba(7, 12, 15, .95) 42%),
+    repeating-linear-gradient(135deg, transparent 0 9px, rgba(255, 224, 151, .018) 9px 10px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 235, 187, .06);
+  color: #eee4d1;
+  text-align: left;
+}
+.mayor-reveal-control::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: linear-gradient(#f0ca7b, #8c5e20);
+  content: '';
+}
+.mayor-reveal-seal {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(229, 187, 105, .4);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(207, 156, 62, .22), rgba(89, 54, 12, .08));
+  box-shadow: 0 0 18px rgba(211, 158, 61, .16);
+  font-size: 19px;
+}
+.mayor-reveal-copy { min-width: 0; }
+.mayor-reveal-copy small,
+.mayor-reveal-copy strong,
+.mayor-reveal-copy span { display: block; }
+.mayor-reveal-copy small { color: #bc8d3f; font-size: 6px; font-weight: 900; letter-spacing: 1.25px; }
+.mayor-reveal-copy strong { margin-top: 2px; overflow: hidden; color: #f1e3c6; font-size: 10px; letter-spacing: .8px; text-overflow: ellipsis; white-space: nowrap; }
+.mayor-reveal-copy span { margin-top: 2px; color: rgba(255, 255, 255, .43); font-size: 8px; line-height: 1.25; }
+.mayor-reveal-button,
+.mayor-confirm-button,
+.mayor-cancel-button {
+  border-radius: 3px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  letter-spacing: .7px;
+}
+.mayor-reveal-button {
+  display: grid;
+  min-width: 94px;
+  min-height: 42px;
+  place-items: center;
+  gap: 1px;
+  border-color: rgba(237, 194, 111, .68);
+  background: linear-gradient(135deg, #9b6825, #c3923e);
+  box-shadow: 0 6px 18px rgba(157, 102, 30, .25), inset 0 1px rgba(255,255,255,.2);
+  color: #140e06;
+}
+.mayor-reveal-button span { font-size: 8px; }
+.mayor-reveal-button b { font-size: 11px; }
+.mayor-reveal-button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.mayor-reveal-confirm-actions { display: grid; width: 105px; gap: 3px; }
+.mayor-confirm-button { min-height: 26px; border-color: #e0ad53; background: #b47c2c; color: #130d05; font-size: 7px; }
+.mayor-confirm-button b { margin-left: 3px; font-size: 10px; }
+.mayor-cancel-button { min-height: 18px; border-color: rgba(255,255,255,.13); background: rgba(255,255,255,.035); color: rgba(255,255,255,.52); font-size: 6px; }
+.mayor-reveal-control.is-confirming { border-color: rgba(234, 176, 72, .84); }
+.mayor-reveal-control.is-active { border-color: rgba(91, 183, 119, .52); background: linear-gradient(105deg, rgba(34, 103, 58, .27), rgba(5, 13, 10, .95) 44%); }
+.mayor-reveal-control.is-active::before { background: linear-gradient(#79d49b, #287243); }
+.mayor-reveal-control.is-active .mayor-reveal-seal { border-color: rgba(100, 200, 133, .42); background: rgba(50, 139, 78, .16); }
+.mayor-reveal-active { color: #8dd3a5; font-size: 7px; font-weight: 900; letter-spacing: 1px; text-align: center; white-space: nowrap; }
+.mayor-reveal-active i { display: inline-block; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: #69c98b; box-shadow: 0 0 8px #69c98b; }
+.mayor-reveal-active b { display: block; margin-top: 3px; color: #e6f4ea; font-size: 10px; }
+.seat-mayor-badge {
+  border: 1px solid rgba(222, 173, 77, .48);
+  border-radius: 3px;
+  padding: 2px 5px;
+  background: rgba(48, 30, 7, .9);
+  color: #e3b760;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .45px;
+  white-space: nowrap;
+}
+.mayor-public-badge {
+  flex: none;
+  border: 1px solid rgba(219, 169, 73, .36);
+  border-radius: 3px;
+  padding: 2px 4px;
+  background: rgba(172, 112, 25, .1);
+  color: #d9aa54;
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: .45px;
+}
+.phase-player-option.mayor-revealed { border-color: rgba(221, 171, 75, .56); background: linear-gradient(100deg, rgba(125, 82, 18, .2), rgba(2, 5, 7, .76)); }
+.phase-player-option.mayor-revealed small { color: #d6a84f; }
+.discussion-emblem > .mayor-reveal-control {
+  width: min(490px, 100%);
+  margin: 18px auto 0;
+}
+.discussion-emblem > .mayor-reveal-control + .discussion-skip-vote { margin-top: 12px; }
+.ballot-booth > .mayor-reveal-control {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  margin-top: 14px;
+  padding-left: 10px;
+}
+.ballot-booth > .mayor-reveal-control .mayor-reveal-seal,
+.ballot-booth > .mayor-reveal-control .mayor-reveal-copy strong,
+.ballot-booth > .mayor-reveal-control .mayor-reveal-copy span { display: none; }
+.ballot-booth > .mayor-reveal-control .mayor-reveal-copy small { font-size: 6px; letter-spacing: .55px; white-space: nowrap; }
+.ballot-booth > .mayor-reveal-control .mayor-reveal-button { min-width: 78px; }
+
+@media (max-width: 760px) {
+  .mayor-reveal-control { width: min(350px, calc(100vw - 26px)); grid-template-columns: minmax(0, 1fr) auto; }
+  .mayor-reveal-seal { display: none; }
+  .mayor-reveal-copy span { display: none; }
+  .mayor-reveal-copy strong { line-height: 1.15; white-space: normal; }
+}
+.device-mobile .mayor-reveal-control { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; padding-left: 10px; }
+.device-mobile .mayor-reveal-seal,
+.device-mobile .mayor-reveal-copy span { display: none; }
+.device-mobile .mayor-reveal-copy strong { line-height: 1.15; white-space: normal; }
+.device-mobile .mayor-reveal-button { min-width: 86px; }
 .action-sq {
   width: 58px;
   height: 58px;
@@ -10135,24 +10269,43 @@ html[data-theme="light"] .role-reveal-screen .role-reveal-card::after { border-c
 html[data-theme="light"] .role-reveal-screen .role-reveal-copy > p { color: rgba(255, 255, 255, .82); }
 html[data-theme="light"] .role-reveal-screen :is(.role-team-name, .role-reveal-kicker) { color: color-mix(in srgb, var(--reveal-accent) 78%, white); }
 
-/* Bouton d'exclusion dans le salon (hôte uniquement). */
-.lobby-kick-btn {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  margin-left: 8px;
-  border-radius: 50%;
-  border: 1px solid rgba(190, 60, 50, .45);
-  background: rgba(190, 60, 50, .1);
-  color: #d08a7c;
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: .35;
-  transition: opacity .15s, background .15s;
+/* Contrôles de roster dans le salon (hôte uniquement). */
+.lobby-player-actions {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
 }
-.lobby-player-row:hover .lobby-kick-btn { opacity: 1; }
-.lobby-kick-btn:hover { background: rgba(190, 60, 50, .28); color: #ff9a8a; }
+.lobby-kick-btn {
+  display: grid;
+  min-width: 88px;
+  min-height: 29px;
+  grid-template-columns: 20px auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(207, 156, 75, .3);
+  border-radius: 4px;
+  padding: 3px 8px 3px 4px;
+  background: linear-gradient(110deg, rgba(154, 99, 35, .12), rgba(255,255,255,.018));
+  color: #c9a464;
+  cursor: pointer;
+  opacity: .62;
+  transition: opacity .18s, border-color .18s, background .18s, color .18s, transform .18s;
+}
+.lobby-kick-btn > span { display: grid; width: 20px; aspect-ratio: 1; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 15px; line-height: 1; opacity: .8; }
+.lobby-kick-btn > b { font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 900; letter-spacing: .75px; }
+.lobby-kick-btn.is-player { border-color: rgba(190, 72, 61, .3); background: rgba(137, 40, 34, .08); color: #c98277; }
+.lobby-player-row:hover .lobby-kick-btn,
+.lobby-kick-btn:focus-visible { opacity: 1; }
+.lobby-kick-btn:hover { border-color: rgba(224, 176, 96, .72); background: rgba(177, 116, 39, .19); color: #f0c779; transform: translateY(-1px); }
+.lobby-kick-btn.is-player:hover { border-color: rgba(224, 91, 77, .68); background: rgba(164, 48, 39, .18); color: #f19a8d; }
+@media (max-width: 620px) {
+  .lobby-kick-btn { min-width: 31px; width: 31px; min-height: 31px; grid-template-columns: 1fr; padding: 4px; }
+  .lobby-kick-btn > b { display: none; }
+  .lobby-kick-btn > span { width: 21px; }
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    UI LAB — catalogue interactif des phases, scènes, modales et animations
@@ -10304,6 +10457,11 @@ body:has(.ui-lab-page) > :is(.theme-toggle, .mobile-nav) { display: none !import
 .ui-lab-overlay-dismiss span { margin-left: 8px; }
 .ui-lab-settings-layer { position: fixed; z-index: 450; inset: 0; background: rgba(1,3,4,.76); backdrop-filter: blur(8px); }
 .ui-lab-settings-layer .game-settings-popover { position: absolute; top: 68px; right: 24px; }
+.ui-lab-lobby-layer { position: fixed; z-index: 440; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(1,3,4,.82); backdrop-filter: blur(9px); }
+.ui-lab-lobby-layer > section { width: min(760px, 100%); border: 1px solid rgba(210,164,82,.25); border-radius: 7px; padding: 22px; background: linear-gradient(120deg, rgba(43,30,16,.2), transparent 38%), #080b0c; box-shadow: 0 28px 90px rgba(0,0,0,.72); }
+.ui-lab-lobby-layer > section > small { color: #b68642; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
+.ui-lab-lobby-layer > section > h2 { margin: 4px 0 17px; color: #eee7dd; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; letter-spacing: 1px; }
+.ui-lab-lobby-layer .lobby-player-row { width: 100%; }
 
 @media (max-width: 1100px) {
   .ui-lab-layout { grid-template-columns: 300px minmax(0,1fr); }
