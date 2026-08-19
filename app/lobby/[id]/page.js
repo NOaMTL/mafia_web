@@ -109,6 +109,15 @@ export default function LobbyWait() {
     socketRef.current?.emit('lobby:kick', { lobbyId: id, userId: player.userId });
   }
 
+  function banPlayer(player) {
+    if (player.isBot) return;
+    const confirmed = window.confirm(
+      `Bannir ${player.username} ?\n\nLe joueur sera exclu immédiatement et ne pourra plus rejoindre ce salon, même avec son code.`,
+    );
+    if (!confirmed) return;
+    socketRef.current?.emit('lobby:ban', { lobbyId: id, userId: player.userId });
+  }
+
   if (!session || !lobby) {
     return (
       <main className="screen-loading">
@@ -152,6 +161,14 @@ export default function LobbyWait() {
       </div>
       <PageHeading eyebrow="LA TABLE SE PRÉPARE" title="SALLE D’ATTENTE"
                    subtitle="Invitez les derniers joueurs et signalez-vous prêt." />
+      <div className={`lobby-privacy-banner ${lobby.isPublic ? 'public' : 'private'}`}>
+        <span>{lobby.isPublic ? '◎' : '⌁'}</span>
+        <div>
+          <small>{lobby.isPublic ? 'SALON PUBLIC · VISIBLE DANS LE REGISTRE' : 'SALON PRIVÉ · ACCÈS PAR CODE UNIQUEMENT'}</small>
+          <strong>{lobby.name || 'Table de la ville'}</strong>
+        </div>
+        <b>{lobby.isPublic ? 'REJOIGNABLE DIRECTEMENT' : 'NON RÉPERTORIÉ'}</b>
+      </div>
       <div className="lobby-code-block">
         <span>CODE D&apos;INVITATION</span>
         <strong
@@ -210,16 +227,29 @@ export default function LobbyWait() {
                   <span className="lobby-player-actions">
                     <span className={`lobby-ready-state ${player.isReady ? 'ready' : ''}`}><i />{player.isReady ? 'PRÊT' : 'EN ATTENTE'}</span>
                     {session.userId === lobby.hostId && !isMe && (
-                      <button
-                        type="button"
-                        className={`lobby-kick-btn ${player.isBot ? 'is-bot' : 'is-player'}`}
-                        title={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
-                        aria-label={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
-                        onClick={() => kickPlayer(player)}
-                      >
-                        <span aria-hidden="true">−</span>
-                        <b>{player.isBot ? 'RETIRER' : 'EXCLURE'}</b>
-                      </button>
+                      <div className="lobby-moderation-actions">
+                        <button
+                          type="button"
+                          className={`lobby-kick-btn ${player.isBot ? 'is-bot' : 'is-player'}`}
+                          title={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
+                          aria-label={player.isBot ? `Retirer le bot ${player.username}` : `Exclure ${player.username}`}
+                          onClick={() => kickPlayer(player)}
+                        >
+                          <span aria-hidden="true">−</span>
+                          <b>{player.isBot ? 'RETIRER' : 'KICK'}</b>
+                        </button>
+                        {!player.isBot && (
+                          <button
+                            type="button"
+                            className="lobby-ban-btn"
+                            title={`Bannir définitivement ${player.username} de ce salon`}
+                            aria-label={`Bannir ${player.username}`}
+                            onClick={() => banPlayer(player)}
+                          >
+                            <span aria-hidden="true">⊘</span><b>BAN</b>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </span>
                 </article>
