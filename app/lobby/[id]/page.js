@@ -25,6 +25,7 @@ export default function LobbyWait() {
   const [sideTab, setSideTab]   = useState('roles');
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
+  const leaveSentRef = useRef(false);
 
   useEffect(() => {
     const s = getSession();
@@ -45,13 +46,20 @@ export default function LobbyWait() {
     socket.on('lobby:player_ready',  refresh);
     socket.on('lobby:bot_added',     refresh);
     socket.on('lobby:player_kicked', refresh);
+    socket.on('lobby:player_left',   refresh);
     // Le joueur exclu est renvoyé à la liste des parties.
     socket.on('lobby:kicked', (d) => {
+      leaveSentRef.current = true;
       alert(d?.message ?? 'Vous avez été exclu du salon.');
       router.replace('/lobby');
     });
+    socket.on('lobby:closed', (d) => {
+      leaveSentRef.current = true;
+      if (d?.hostId !== s.userId) alert("L'hôte a fermé le salon.");
+      router.replace('/lobby');
+    });
     socket.on('lobby:chat_message',  (m) => setChatMsgs((p) => [...p.slice(-99), m]));
-    socket.on('game:started',        (d) => router.push(`/game/${d.gameId}`));
+    socket.on('game:started',        (d) => { leaveSentRef.current = true; router.push(`/game/${d.gameId}`); });
     socket.on('error',               (d) => setError(d.message ?? 'Erreur'));
 
     // Un seul lobby:join par connexion : si le socket est déjà connecté on
@@ -62,12 +70,21 @@ export default function LobbyWait() {
     if (socket.connected) join();
     refresh();
 
+    const leaveOnPageExit = () => {
+      if (leaveSentRef.current) return;
+      leaveSentRef.current = true;
+      socket.emit('lobby:leave', { lobbyId: id });
+    };
+    window.addEventListener('popstate', leaveOnPageExit);
+
     return () => {
       ['lobby:joined', 'lobby:player_joined', 'lobby:player_ready',
-       'lobby:bot_added', 'lobby:player_kicked', 'lobby:kicked',
+       'lobby:bot_added', 'lobby:player_kicked', 'lobby:player_left',
+       'lobby:kicked', 'lobby:closed',
        'lobby:chat_message', 'game:started', 'error',
       ].forEach((e) => socket.off(e));
       socket.off('connect', join);
+      window.removeEventListener('popstate', leaveOnPageExit);
     };
   }, [id, router]);
 
@@ -118,11 +135,27 @@ export default function LobbyWait() {
     socketRef.current?.emit('lobby:ban', { lobbyId: id, userId: player.userId });
   }
 
+  function prepareLobbyExit() {
+    if (leaveSentRef.current) return true;
+    const isHost = session?.userId === lobby?.hostId;
+    const otherPlayers = (lobby?.players ?? []).filter((player) => player.userId !== session?.userId);
+    if (isHost && otherPlayers.length > 0 && !window.confirm(
+      `Fermer ce salon ?\n\nLes ${otherPlayers.length} autre${otherPlayers.length > 1 ? 's' : ''} participant${otherPlayers.length > 1 ? 's' : ''} seront expulsés.`,
+    )) return false;
+    leaveSentRef.current = true;
+    socketRef.current?.emit('lobby:leave', { lobbyId: id });
+    return true;
+  }
+
+  function leaveLobby() {
+    if (prepareLobbyExit()) router.push('/lobby');
+  }
+
   if (!session || !lobby) {
     return (
       <main className="screen-loading">
         <div className="ambiance ambiance-home on" />
-        <BrandMark compact />
+        <BrandMark compact onClick={(event) => { if (!prepareLobbyExit()) event.preventDefault(); }} />
         <div className="loading-sigil"><span>LG</span></div>
         <div className="page-eyebrow">PRÉPARATION DE LA TABLE</div>
         <p>Ouverture de la salle d&apos;attente…</p>
@@ -156,8 +189,8 @@ export default function LobbyWait() {
       <ConnectionBanner />
       <div className="ambiance ambiance-home on" />
       <div className="lobby-wait-nav">
-        <BrandMark href="/lobby" compact />
-        <button onClick={() => router.push('/lobby')}>QUITTER LA SALLE</button>
+        <BrandMark href="/lobby" compact onClick={(event) => { if (!prepareLobbyExit()) event.preventDefault(); }} />
+        <button onClick={leaveLobby}>{session.userId === lobby.hostId ? 'FERMER LA SALLE' : 'QUITTER LA SALLE'}</button>
       </div>
       <PageHeading eyebrow="LA TABLE SE PRÉPARE" title="SALLE D’ATTENTE"
                    subtitle="Invitez les derniers joueurs et signalez-vous prêt." />
