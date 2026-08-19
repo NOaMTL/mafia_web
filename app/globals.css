@@ -6623,18 +6623,39 @@ html[data-game-motion="reduced"] :is(.affected-action-reveal, .affected-action-r
 .role-card-modal-header button { display: grid; width: 39px; min-width: 39px; height: 39px; min-height: 0; place-items: center; border-radius: 50%; padding: 0; font-size: 14px; }
 .role-identity-card {
   position: relative;
+  isolation: isolate;
+  min-height: 720px;
   margin: 16px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--role-card-accent) 60%, #80715b);
   border-radius: 6px;
   padding: 24px 28px 26px;
-  background:
-    radial-gradient(circle at 50% 19%, color-mix(in srgb, var(--role-card-accent) 14%, transparent), transparent 29%),
-    repeating-linear-gradient(118deg, rgba(255,255,255,.018) 0 1px, transparent 1px 8px),
-    #101213;
-  box-shadow: inset 0 0 70px rgba(0,0,0,.52);
+  background: #050708;
+  box-shadow: inset 0 0 70px rgba(0,0,0,.62);
 }
-.role-identity-card::before { content: ''; position: absolute; inset: 9px; border: 1px solid color-mix(in srgb, var(--role-card-accent) 20%, transparent); pointer-events: none; }
+.role-identity-card::before { content: ''; position: absolute; z-index: 5; inset: 9px; border: 1px solid color-mix(in srgb, var(--role-card-accent) 20%, transparent); pointer-events: none; }
+.role-card-background-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  filter: saturate(.82) contrast(1.06) brightness(.88);
+  transform: scale(1.015);
+  animation: role-card-art-in .8s .08s cubic-bezier(.16,.84,.24,1) both;
+}
+.role-card-background-veil {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2,4,5,.12) 0%, rgba(2,4,5,.18) 22%, rgba(2,4,5,.66) 43%, rgba(2,4,5,.94) 61%, #020304 100%),
+    linear-gradient(90deg, rgba(0,0,0,.38), transparent 48%, rgba(0,0,0,.18));
+}
+.role-identity-card > :not(.role-card-background-art, .role-card-background-veil) { position: relative; z-index: 3; }
 .role-card-corner { position: absolute; z-index: 2; width: 25px; height: 25px; border-color: var(--role-card-accent); opacity: .85; }
 .role-card-corner.top-left { top: 16px; left: 16px; border-top: 2px solid; border-left: 2px solid; }
 .role-card-corner.top-right { top: 16px; right: 16px; border-top: 2px solid; border-right: 2px solid; }
@@ -6642,15 +6663,15 @@ html[data-game-motion="reduced"] :is(.affected-action-reveal, .affected-action-r
 .role-card-corner.bottom-right { right: 16px; bottom: 16px; border-right: 2px solid; border-bottom: 2px solid; }
 .role-card-security { display: flex; align-items: center; justify-content: space-between; color: rgba(255,255,255,.33); font-size: 9px; font-weight: 900; letter-spacing: 2px; }
 .role-card-security b { color: color-mix(in srgb, var(--role-card-accent) 74%, white); font-size: 10px; }
-.role-card-emblem { display: grid; width: 102px; aspect-ratio: 1; place-items: center; margin: 21px auto 13px; border: 1px solid color-mix(in srgb, var(--role-card-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--role-card-accent) 10%, rgba(0,0,0,.45)); box-shadow: 0 0 0 8px color-mix(in srgb, var(--role-card-accent) 5%, transparent), 0 0 40px color-mix(in srgb, var(--role-card-accent) 22%, transparent); }
+.role-card-emblem { display: grid; width: 82px; aspect-ratio: 1; place-items: center; margin: clamp(155px, 24vh, 220px) auto 13px; border: 1px solid color-mix(in srgb, var(--role-card-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--role-card-accent) 10%, rgba(0,0,0,.58)); box-shadow: 0 0 0 8px color-mix(in srgb, var(--role-card-accent) 5%, transparent), 0 0 40px color-mix(in srgb, var(--role-card-accent) 22%, transparent); backdrop-filter: blur(5px); }
 .role-card-emblem span { font-size: 46px; filter: drop-shadow(0 8px 12px rgba(0,0,0,.45)); }
 .role-card-identity { text-align: center; }
 .role-card-identity > small { color: rgba(255,255,255,.42); font-size: 10px; font-weight: 900; letter-spacing: 2.5px; }
 .role-card-identity h1 { margin: 4px 0 2px; color: #f1eee8; font-family: 'Barlow Condensed', sans-serif; font-size: clamp(43px, 7vw, 68px); line-height: .95; letter-spacing: 1px; }
 .role-card-identity > strong { color: color-mix(in srgb, var(--role-card-accent) 82%, white); font-size: 12px; letter-spacing: 2px; }
-.role-card-description { max-width: 620px; margin: 16px auto 20px; color: rgba(255,255,255,.7); font-family: 'Crimson Text', serif; font-size: 18px; line-height: 1.45; text-align: center; }
+.role-card-description { max-width: 620px; margin: 16px auto 20px; color: rgba(255,255,255,.78); font-family: 'Crimson Text', serif; font-size: 18px; line-height: 1.45; text-align: center; text-shadow: 0 2px 12px #000; }
 .role-card-information { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.role-card-information > section { min-height: 144px; border: 1px solid rgba(255,255,255,.1); padding: 15px; background: rgba(0,0,0,.26); }
+.role-card-information > section { min-height: 144px; border: 1px solid rgba(255,255,255,.11); padding: 15px; background: rgba(1,3,4,.7); backdrop-filter: blur(6px); }
 .role-card-information small { color: color-mix(in srgb, var(--role-card-accent) 74%, white); font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
 .role-card-information h2 { margin: 5px 0 7px; color: #eee9df; font-family: 'Barlow Condensed', sans-serif; font-size: 24px; }
 .role-card-information p { color: rgba(255,255,255,.56); font-size: 12px; line-height: 1.5; }
@@ -6672,6 +6693,7 @@ html[data-game-motion="reduced"] :is(.affected-action-reveal, .affected-action-r
 .role-card-modal-window > footer button { min-height: 41px; border-color: color-mix(in srgb, var(--role-card-accent) 50%, transparent); color: color-mix(in srgb, var(--role-card-accent) 80%, white); font-size: 10px; font-weight: 900; letter-spacing: 1px; }
 @keyframes role-modal-backdrop { from { opacity: 0; } to { opacity: 1; } }
 @keyframes role-modal-card-in { from { opacity: 0; transform: translateY(22px) scale(.97) rotateX(3deg); } to { opacity: 1; transform: none; } }
+@keyframes role-card-art-in { from { opacity: 0; transform: scale(1.09); } to { opacity: 1; transform: scale(1.015); } }
 
 /* Visual mode selector inside the game comfort panel. */
 .game-settings-popover section > label:not(.setting-switch) { display: block; margin: 2px 0 9px; color: #b88b48; font-size: 10px; font-weight: 900; letter-spacing: 1.2px; }

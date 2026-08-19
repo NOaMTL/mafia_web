@@ -2003,6 +2003,7 @@ function GameSettingsPopover({ accessibility, visualTheme, audio, onAccessibilit
 function RoleCardModal({ role, round, teammates, onClose }) {
   const mafia = role.team === 'MAFIA';
   const roleScene = ROLE_NIGHT_SCENES[role.role] ?? ROLE_NIGHT_SCENES.CITIZEN;
+  const roleGuideEntry = ROLE_BY_KEY[role.role];
   const objective = mafia
     ? 'Élimine les membres de la Town sans révéler la famille Mafia, jusqu’à prendre le contrôle du vote.'
     : 'Observe, partage seulement ce que tu juges utile et aide la Town à identifier puis éliminer toute la Mafia.';
@@ -2017,7 +2018,7 @@ function RoleCardModal({ role, round, teammates, onClose }) {
 
   return (
     <div className={`role-card-modal ${mafia ? 'mafia' : 'town'}`} role="dialog" aria-modal="true" aria-labelledby="role-card-title"
-         style={{ '--role-card-accent': roleScene.accent }} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+         style={{ '--role-card-accent': roleGuideEntry?.color ?? roleScene.accent }} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="role-card-modal-window">
         <header className="role-card-modal-header">
           <div><small>IDENTITÉ PERSONNELLE · TOUR {round}</small><strong>TA CARTE DE RÔLE</strong></div>
@@ -2025,12 +2026,17 @@ function RoleCardModal({ role, round, teammates, onClose }) {
         </header>
 
         <article className="role-identity-card">
+          {roleGuideEntry?.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="role-card-background-art" src={roleGuideEntry.image} alt="" decoding="async" />
+          )}
+          <div className="role-card-background-veil" aria-hidden="true" />
           <i className="role-card-corner top-left" aria-hidden="true" />
           <i className="role-card-corner top-right" aria-hidden="true" />
           <i className="role-card-corner bottom-left" aria-hidden="true" />
           <i className="role-card-corner bottom-right" aria-hidden="true" />
           <div className="role-card-security"><span>CONFIDENTIEL</span><b>LG-{String(round).padStart(2, '0')}</b></div>
-          <div className="role-card-emblem" aria-hidden="true"><RoleIcon roleKey={role.role} className="role-card-art" /></div>
+          <div className="role-card-emblem" aria-hidden="true"><span>{roleGuideEntry?.emoji ?? roleScene.icon}</span></div>
           <div className="role-card-identity">
             <small>VOUS ÊTES</small>
             <h1 id="role-card-title">{(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>
