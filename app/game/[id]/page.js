@@ -11,6 +11,7 @@ import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
 import ConnectionBanner from '@/components/ConnectionBanner';
 import RoleIcon from '@/components/RoleIcon';
+import { ROLE_GUIDE } from '@/lib/roleGuide';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,9 @@ const PHASE_SLATES = {
   TRIAL:           { icon: '⚖️', title: 'LE PROCÈS',            sub: 'L’accusé se défend' },
   JUDGMENT:        { icon: '⚖️', title: 'LE JUGEMENT',          sub: 'Coupable ou innocent ?' },
 };
+
+// Illustrations de rôle (mêmes visuels que le guide).
+const ROLE_ART = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.image]));
 
 const NIGHT_PROMPTS = {
   MAFIOSO:     'Choisissez la victime de la famille.',
@@ -854,11 +858,13 @@ export default function GamePage() {
               <div className="role-reveal-card">
                 <i className="card-corner corner-tl" /><i className="card-corner corner-tr" />
                 <i className="card-corner corner-bl" /><i className="card-corner corner-br" />
+                {/* Illustration plein cadre + voile dégradé (même recette que /guide) */}
+                {ROLE_ART[role.role] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="role-reveal-art" src={ROLE_ART[role.role]} alt="" decoding="async" />
+                )}
+                <div className="role-reveal-scrim" aria-hidden="true" />
                 <div className="role-card-classified">DOSSIER CONFIDENTIEL · TOUR {round}</div>
-                <div className="role-sigil">
-                  <span className="sigil-ring" aria-hidden="true" />
-                  <RoleIcon roleKey={role.role} className="role-icon" />
-                </div>
                 <div className="role-reveal-copy">
                   <div className="role-overline">VOUS ÊTES</div>
                   <h1 className="role-name">{(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>
@@ -1706,8 +1712,25 @@ function PhaseCenterStage({
               </div>
             ) : powerExhausted ? (
               <div className="night-passive-state power-exhausted"><span className="stage-hourglass">∅</span><small>RESSOURCE ÉPUISÉE</small><h3>TON POUVOIR EST À SEC</h3><p>Observe la nuit et prépare ton témoignage pour le village.</p></div>
+            ) : role?.role === 'SPY' && isAlive ? (
+              <div className="spy-listening-state">
+                <div className="spy-waves" aria-hidden="true"><i /><i /><i /><span>📡</span></div>
+                <small>ÉCOUTE CLANDESTINE · AUCUNE CIBLE À CHOISIR</small>
+                <h3>TU INTERCEPTES LA MAFIA</h3>
+                <p>
+                  Ton pouvoir est <b>automatique</b> : chaque nuit, tu apprends
+                  <b> chez qui la Mafia s’est rendue</b>, sans rien avoir à faire.
+                  Le rapport arrive à l’aube dans ton carnet <b>🗂 INTEL</b>.
+                </p>
+                <div className="spy-hint">
+                  ⚠️ Ne révèle pas trop vite que tu es l’Espion : la famille élimine
+                  en priorité ceux qui parlent de ses mouvements.
+                </div>
+              </div>
+            ) : role?.role === 'MAYOR' && isAlive ? (
+              <div className="night-passive-state"><span className="stage-hourglass">🏛️</span><small>AUCUNE ACTION NOCTURNE</small><h3>TON POUVOIR EST DIURNE</h3><p>Tu peux te révéler publiquement pendant le jour : ton vote comptera alors double, définitivement.</p></div>
             ) : (
-              <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>AUCUNE ACTION ACTIVE</small><h3>OBSERVE ET PRÉPARE-TOI</h3><p>Ton rôle agira pendant une autre phase ou dispose d’un pouvoir passif.</p></div>
+              <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>AUCUNE ACTION ACTIVE</small><h3>OBSERVE ET PRÉPARE-TOI</h3><p>Ton rôle agira pendant une autre phase ou dispose d’un pouvoir passif. Profite de la nuit pour rédiger ton testament.</p></div>
             )}
           </article>
         </div>
