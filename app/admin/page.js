@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [showPasswords, setShowPasswords] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [games, setGames] = useState(null);
+  const [rolesConfig, setRolesConfig] = useState(null); // { roles, disabled }
   const [openGame, setOpenGame] = useState(null); // détail de partie (roster)
   const pageSize = 30;
 
@@ -77,6 +78,7 @@ export default function AdminPage() {
       .then(() => {
         loadUsers(1, '');
         api.adminListGames(60).then(setGames).catch(() => setGames([]));
+        api.adminGetRoles().then(setRolesConfig).catch(() => {});
       })
       .catch((requestError) => {
         setAccess(requestError.status === 403 ? 'denied' : 'error');
@@ -137,6 +139,22 @@ export default function AdminPage() {
       setError(requestError.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function toggleRole(key) {
+    if (!rolesConfig) return;
+    const disabled = rolesConfig.disabled.includes(key)
+      ? rolesConfig.disabled.filter((r) => r !== key)
+      : [...rolesConfig.disabled, key];
+    setRolesConfig((current) => ({ ...current, disabled })); // optimiste
+    try {
+      const result = await api.adminSetRoles(disabled);
+      setRolesConfig((current) => ({ ...current, disabled: result.disabled }));
+      setNotice('Rôles mis à jour — appliqué aux prochaines parties.');
+    } catch (requestError) {
+      setError(requestError.message);
+      api.adminGetRoles().then(setRolesConfig).catch(() => {});
     }
   }
 
@@ -214,6 +232,39 @@ export default function AdminPage() {
           <div><button disabled={page <= 1 || loading} onClick={() => changePage(page - 1)}>← PRÉCÉDENT</button><b>PAGE {page} / {totalPages}</b><button disabled={page >= totalPages || loading} onClick={() => changePage(page + 1)}>SUIVANT →</button></div>
         </footer>
       </section>
+
+      {/* ── Rôles activables ── */}
+      {rolesConfig && (
+        <section className="card admin-roles-card">
+          <header className="admin-users-heading">
+            <div>
+              <small>COMPOSITION DES PARTIES</small>
+              <h2>RÔLES EN JEU</h2>
+              <p>Un rôle désactivé est remplacé par Citoyen (Ville) ou Mafioso (Mafia) dans les prochaines parties. Les rôles verrouillés garantissent l&apos;équilibre.</p>
+            </div>
+          </header>
+          {['TOWN', 'MAFIA'].map((team) => (
+            <div key={team} className="admin-roles-group">
+              <label>{team === 'TOWN' ? '✦ VILLE' : '◆ MAFIA'}</label>
+              <div className="admin-roles-chips">
+                {rolesConfig.roles.filter((r) => r.team === team).map((r) => {
+                  const off = rolesConfig.disabled.includes(r.key);
+                  return (
+                    <button key={r.key}
+                            className={`admin-role-chip ${off ? 'off' : 'on'} ${r.locked ? 'locked' : ''}`}
+                            disabled={r.locked}
+                            title={r.locked ? 'Rôle essentiel — non désactivable' : off ? 'Cliquer pour réactiver' : 'Cliquer pour désactiver'}
+                            onClick={() => toggleRole(r.key)}>
+                      {off ? '✕ ' : '✓ '}{r.key}
+                      {r.locked && ' 🔒'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* ── Historique des parties jouées ── */}
       <section className="card admin-games-card">
