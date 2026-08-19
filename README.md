@@ -1,9 +1,11 @@
 # Mafia — Client Web
 
-Client web Next.js avec chat en jeu (3 canaux : jour, mafia, morts).
+Client web Next.js 16 / React 19 avec chat en jeu (3 canaux : jour, mafia, morts).
 Le mobile Flutter reste sans chat ; ce client est la version « jeu en ligne ».
 
 ## Démarrage
+
+Prérequis : Node.js 20.9 ou supérieur.
 
 ```bash
 cd webapp

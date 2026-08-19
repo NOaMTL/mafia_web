@@ -864,7 +864,6 @@ export default function GamePage() {
   // ═══ Role reveal ═══
   if (phase === 'ROLE_REVEAL') {
     const roleGuideEntry = ROLE_BY_KEY[role?.role];
-    const revealAccent = roleGuideEntry?.color ?? (role?.team === 'MAFIA' ? '#d45147' : '#d0a04c');
     return (
       <main className="role-reveal-screen">
         <NightVideoBackdrop disabled={accessibility.reducedMotion || visualTheme === 'light'} />
@@ -875,7 +874,6 @@ export default function GamePage() {
         {role ? (
           <section
             className={`role-reveal-stage ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}
-            style={{ '--reveal-accent': revealAccent }}
           >
             <div className="reveal-kicker"><span /> VOTRE IDENTITÉ POUR CETTE NUIT <span /></div>
 
