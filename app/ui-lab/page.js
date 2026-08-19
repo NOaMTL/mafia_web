@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import GamePanel from '@/components/GamePanel';
+import NightVideoBackdrop from '@/components/NightVideoBackdrop';
 import RoleIcon from '@/components/RoleIcon';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
 
@@ -185,20 +186,22 @@ function LabScreen({ phase, role }) {
 
   const ambiance = ['TRIAL', 'JUDGMENT'].includes(phase) ? 'trial' : phase === 'SENTENCE' ? 'danger' : phase === 'NIGHT' ? 'night' : 'day';
   const scene = { night: '/bg/nuit.webp', day: '/bg/jour.webp', trial: '/bg/proces.webp', danger: '/bg/sentence.webp' }[ambiance];
+  const displayTimer = phase === 'MORNING_GAZETTE' ? '0:15' : '0:42';
 
   return (
     <div className="game-shell ui-lab-game-shell">
       <div className="game-topbar">
         <div className="left"><span className="game-code">PARTIE #LAB3</span><span className="game-sub">5 / 6 joueurs en vie</span></div>
         <div className="daynight"><span>{ambiance === 'night' ? '🌙' : '☀️'}</span><div className="phase-pill"><div className="big">{ambiance === 'night' ? 'NUIT 3' : 'JOUR 3'}</div><div className="small">{PHASE_LABELS[phase]}</div></div></div>
-        <div className="right"><div className="timer-chip">⏱ 0:42<span className="lbl">FIN DU TOUR</span></div></div>
+        <div className="right"><div className="timer-chip">⏱ {displayTimer}<span className="lbl">FIN DU TOUR</span></div></div>
       </div>
       <div className="game-main ui-lab-game-main">
         <div className={`table-scene scene-${ambiance} phase-${phase.toLowerCase().replaceAll('_', '-')}`} style={{ backgroundImage: `url('${scene}')` }}>
+          {ambiance === 'night' && <NightVideoBackdrop contained />}
           <LabPhaseStage phase={phase} role={role} />
         </div>
       </div>
-      <nav className="game-mobile-tabs"><div className="mobile-timer"><span>{ambiance === 'night' ? '🌙' : '☀️'}</span><b>0:42</b><small>{PHASE_LABELS[phase]}</small></div>{[['🎭','TABLE'],['💬','CHAT'],['👥','JOUEURS']].map(([icon,label], index) => <button key={label} className={index === 0 ? 'active' : ''}><span>{icon}</span><small>{label}</small></button>)}</nav>
+      <nav className="game-mobile-tabs"><div className="mobile-timer"><span>{ambiance === 'night' ? '🌙' : '☀️'}</span><b>{displayTimer}</b><small>{PHASE_LABELS[phase]}</small></div>{[['🎭','TABLE'],['💬','CHAT'],['👥','JOUEURS']].map(([icon,label], index) => <button key={label} className={index === 0 ? 'active' : ''}><span>{icon}</span><small>{label}</small></button>)}</nav>
     </div>
   );
 }
@@ -220,14 +223,67 @@ function LabMayorRevealControl() {
 
 function LabPhaseStage({ phase, role }) {
   const scene = roleScene(role);
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
+  const [labTargets, setLabTargets] = useState(['p3']);
+  useEffect(() => {
+    if (!targetPickerOpen) return undefined;
+    const closeOnEscape = (event) => event.key === 'Escape' && setTargetPickerOpen(false);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [targetPickerOpen]);
   if (phase === 'NIGHT') {
+    const availableTargets = SAMPLE_PLAYERS.filter((player) => player.isAlive && player.userId !== 'me');
+    const selectedTargets = labTargets.map((targetId) => availableTargets.find((player) => player.userId === targetId)).filter(Boolean);
+    const isBusDriver = role.key === 'BUS_DRIVER';
+    const needsSecondTarget = isBusDriver && labTargets.length === 1;
+    const targetPickerTitle = isBusDriver ? needsSecondTarget ? 'CHOISIS LE SECOND PASSAGER' : 'CHOISIS DEUX PASSAGERS' : 'CHOISIS TA CIBLE';
+    const targetSummary = selectedTargets.length ? selectedTargets.map((player) => player.username).join('  ↔  ') : 'AUCUNE CIBLE SÉLECTIONNÉE';
+    const selectTarget = (player) => {
+      if (!isBusDriver) {
+        setLabTargets([player.userId]);
+        setTargetPickerOpen(false);
+        return;
+      }
+      if (labTargets.includes(player.userId)) {
+        setLabTargets((current) => current.filter((targetId) => targetId !== player.userId));
+        return;
+      }
+      if (labTargets.length === 1) {
+        setLabTargets((current) => [...current, player.userId]);
+        setTargetPickerOpen(false);
+        return;
+      }
+      setLabTargets([player.userId]);
+    };
     return <section className="phase-stage night-role-stage night-set-evidence" style={{ '--role-accent': scene.accent }}>
       <div className="night-role-atmosphere" aria-hidden="true"><span>{scene.icon}</span></div>
       <header className="phase-stage-heading"><div><small>NUIT 3 · TON RÔLE</small><h2>{role.name}</h2></div><time><small>FIN DE NUIT</small>00:42</time></header>
-      <div className="night-role-layout"><article className="night-role-brief"><RoleIcon roleKey={role.key} className="night-role-icon" /><small>{role.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</small><h1>{scene.title}</h1><p>{scene.copy}</p></article><article className="night-action-card"><div className="night-action-title"><span>{role.nightAction ? 'SÉLECTIONNE UNE CIBLE' : 'AUCUNE CIBLE'}</span><b>5 choix</b></div><div className="phase-player-grid">{SAMPLE_PLAYERS.filter((player) => player.isAlive && player.userId !== 'me').slice(0,4).map((player, index) => <button key={player.userId} className={`phase-player-option mode-night ${index === 1 ? 'selected' : ''}`}><span className="phase-player-avatar">{player.username[0]}</span><span><b>{player.username}</b><small>VIVANT</small></span><i>{index === 1 ? '✓' : '›'}</i></button>)}</div><div className="night-confirm-state"><span>{scene.action}</span><small>Choisis un joueur pour agir.</small></div></article></div>
+      <div className="night-role-layout">
+        <article className="night-role-brief"><RoleIcon roleKey={role.key} className="night-role-icon" /><small>{role.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</small><h1>{scene.title}</h1><p>{scene.copy}</p></article>
+        {role.nightAction ? <article className="night-action-card night-target-launcher">
+          <div className="night-action-title"><span>ACTION CIBLÉE</span><b>{availableTargets.length} choix</b></div>
+          <button type="button" className="night-target-open-button" onClick={() => setTargetPickerOpen(true)}>
+            <span className="night-target-open-icon" aria-hidden="true">⌖</span>
+            <span className="night-target-open-copy"><small>CIBLE ACTUELLE</small><strong>{needsSecondTarget ? 'CHOISIR LA SECONDE CIBLE' : targetSummary}</strong><em>{needsSecondTarget ? `Première cible : ${selectedTargets[0]?.username}` : 'Clique pour modifier ton choix'}</em></span>
+            <b>MODIFIER <i>→</i></b>
+          </button>
+          <div className="night-confirm-state"><span>{scene.action}</span><small>Ton choix reste modifiable jusqu’à la fin de la nuit.</small></div>
+        </article> : <article className="night-action-card"><div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>AUCUNE ACTION ACTIVE</small><h3>OBSERVE ET PRÉPARE-TOI</h3><p>Profite de la nuit pour préparer ton témoignage.</p></div></article>}
+      </div>
+      {targetPickerOpen && <div className="night-target-picker-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setTargetPickerOpen(false)}>
+        <section className="night-target-picker-modal" role="dialog" aria-modal="true" aria-labelledby="lab-night-target-title" style={{ '--role-accent': scene.accent }}>
+          <header><div><small>NUIT 3 · {role.name.toUpperCase()}</small><h2 id="lab-night-target-title">{targetPickerTitle}</h2><p>{scene.copy}</p></div><button type="button" onClick={() => setTargetPickerOpen(false)} aria-label="Fermer la sélection">×</button></header>
+          <div className="night-target-picker-meta"><span>{availableTargets.length} CIBLES DISPONIBLES</span><b>{isBusDriver ? 'ORDRE 1 → 2' : scene.action}</b></div>
+          <div className="phase-player-grid night-target-picker-grid">{availableTargets.map((player) => {
+            const selectedIndex = labTargets.indexOf(player.userId);
+            return <button key={player.userId} type="button" className={`phase-player-option mode-night ${selectedIndex >= 0 ? 'selected' : ''}`} onClick={() => selectTarget(player)}><span className="phase-player-avatar">{player.username[0]}</span><span><b>{player.username}</b><small>VIVANT</small></span><i>{selectedIndex >= 0 ? selectedIndex + 1 : '›'}</i></button>;
+          })}</div>
+          <footer><div><small>{isBusDriver ? 'TRAJET ACTUEL' : 'CIBLE ACTUELLE'}</small><strong>{targetSummary}</strong></div><button type="button" onClick={() => setTargetPickerOpen(false)}>FERMER</button></footer>
+        </section>
+      </div>}
     </section>;
   }
-  if (phase === 'MORNING_GAZETTE') return <section className="phase-stage gazette-stage"><header className="gazette-masthead"><span>ÉDITION Nº 3</span><h1>LA GAZETTE DE LA NUIT</h1><time>00:42</time></header><div className="gazette-paper"><div className="gazette-date">LOUP GAROU MAFIA · JOUR 3 · ÉDITION SPÉCIALE</div><article className="fatal"><span className="gazette-mark">☠</span><div><small>DERNIÈRE HEURE</small><h2>GASTON RETROUVÉ SANS VIE</h2><p>La victime était Citoyen. La ville se réveille sous le choc.</p><blockquote>« Méfiez-vous de Marcel. »</blockquote></div></article><footer>VÉRIFIEZ LES FAITS · MÉFIEZ-VOUS DES RUMEURS · LA VILLE VOUS OBSERVE</footer></div></section>;
+  if (phase === 'MORNING_GAZETTE') return <section className="phase-stage gazette-stage"><header className="gazette-masthead"><span>ÉDITION Nº 3</span><h1>LA GAZETTE DE LA NUIT</h1><time>00:15</time></header><div className="gazette-paper"><div className="gazette-date">LOUP GAROU MAFIA · JOUR 3 · ÉDITION SPÉCIALE</div><article className="fatal"><span className="gazette-mark">☠</span><div><small>DERNIÈRE HEURE</small><h2>GASTON RETROUVÉ SANS VIE</h2><p>La victime était Citoyen. La ville se réveille sous le choc.</p><blockquote>« Méfiez-vous de Marcel. »</blockquote></div></article><footer>VÉRIFIEZ LES FAITS · MÉFIEZ-VOUS DES RUMEURS · LA VILLE VOUS OBSERVE</footer></div></section>;
   if (phase === 'DAY_DISCUSSION') return <section className="phase-stage discussion-stage"><header className="phase-stage-heading"><div><small>JOUR 3 · PLACE DU VILLAGE</small><h2>LA PAROLE EST À LA VILLE</h2></div><time><small>DISCUSSION</small>00:42</time></header><div className="discussion-plaza"><div className="discussion-crowd" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><div className="discussion-emblem"><span>♟</span><small>PLACE PUBLIQUE · JOUR 3</small><h1>DISCUSSION EN COURS</h1><p>Le village débat jusqu’à la fin du temps imparti.</p>{role.key === 'MAYOR' && <LabMayorRevealControl />}<div className="discussion-skip-vote"><div className="discussion-skip-copy"><span>⏭</span><div><small>VOTE COLLECTIF</small><strong>PASSER À LA PHASE SUIVANTE</strong></div></div><div className="discussion-skip-progress"><span style={{ width: '33%' }} /></div><button><b>VOTER POUR PASSER</b><small>1/3 · majorité requise</small></button></div></div><div className="discussion-lampposts"><i /><i /></div></div></section>;
   if (phase === 'DAY_VOTE') return <section className="phase-stage vote-stage"><div className="vote-crowd"><i /><i /><i /><i /><i /><i /><i /></div><header className="phase-stage-heading"><div><small>JOUR 3 · LA PLACE PUBLIQUE</small><h2>QUI DEVRA RÉPONDRE DEVANT LA VILLE ?</h2></div><time><small>LA FOULE TRANCHE DANS</small>00:42</time></header><div className="vote-stage-layout"><div className="vote-candidates">{SAMPLE_PLAYERS.filter((player) => player.isAlive && player.userId !== 'me').map((player, index) => <button key={player.userId} className={`phase-player-option mode-vote ${index === 1 ? 'selected' : ''}`}><span className="phase-player-avatar">{player.username[0]}</span><span><b>{player.username}</b><small>ACCUSER</small></span><i>{index === 1 ? 3 : '›'}</i></button>)}</div><aside className="ballot-booth"><span className="vote-box-icon">🗳️</span><small>TON BULLETIN</small><h3>TA VOIX EST DÉPOSÉE</h3><p>Tu peux encore changer d’avis.</p><div className="ballot-status"><span>ACCUSATION</span><strong>Marcel</strong></div>{role.key === 'MAYOR' && <LabMayorRevealControl />}</aside></div></section>;
   if (phase === 'TRIAL' || phase === 'JUDGMENT') return <section className={`phase-stage court-stage ${phase === 'JUDGMENT' ? 'judging' : ''}`}><header className="phase-stage-heading"><div><small>TRIBUNAL DE LA VILLE</small><h2>{phase === 'TRIAL' ? 'LE PROCÈS' : 'LE VERDICT'}</h2></div><time><small>{phase === 'TRIAL' ? 'DÉFENSE' : 'DÉLIBÉRATION'}</small>00:42</time></header><div className="courtroom"><div className="court-seal">⚖️</div><div className="accused-stand"><small>L’ACCUSÉ</small><span>M</span><h1>MARCEL</h1><p>{phase === 'TRIAL' ? 'Écoute sa défense avant de juger.' : 'Décide de son sort.'}</p></div>{phase === 'JUDGMENT' ? <><div className="court-verdict-actions"><button className="guilty">COUPABLE</button><button className="innocent">INNOCENT</button><button>ABSTENTION</button></div><div className="court-tally"><span><b>3</b> COUPABLE</span><i>CONTRE</i><span><b>1</b> INNOCENT</span></div></> : <div className="court-instruction">LA DÉFENSE A LA PAROLE</div>}</div></section>;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useParams } from 'next/navigation';
 import { getSession } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
@@ -10,6 +11,7 @@ import { getAccessibilitySettings, applyAccessibilitySettings, saveAccessibility
 import Chat from '@/components/Chat';
 import GamePanel from '@/components/GamePanel';
 import ConnectionBanner from '@/components/ConnectionBanner';
+import NightVideoBackdrop from '@/components/NightVideoBackdrop';
 import RoleIcon from '@/components/RoleIcon';
 import { ROLE_GUIDE } from '@/lib/roleGuide';
 
@@ -1595,18 +1597,6 @@ export default function GamePage() {
   );
 }
 
-function NightVideoBackdrop({ disabled = false, contained = false }) {
-  return (
-    <div className={`night-video-backdrop ${contained ? 'contained' : 'fullscreen'} ${disabled ? 'is-static' : ''}`} aria-hidden="true">
-      {!disabled && (
-        <video autoPlay muted loop playsInline preload="auto" poster="/bg/nuit.webp">
-          <source src="/bg/night.mp4" type="video/mp4" />
-        </video>
-      )}
-    </div>
-  );
-}
-
 function MayorRevealControl({ revealed, confirming, onAsk, onCancel, onConfirm }) {
   return (
     <section className={`mayor-reveal-control ${revealed ? 'is-active' : ''} ${confirming ? 'is-confirming' : ''}`} aria-label="Pouvoir du Maire">
@@ -1639,10 +1629,22 @@ function PhaseCenterStage({
   judgment, castVerdict, skipInfo, skipRequired, hasSkipped, onSkipPhase,
   mayorRevealed, mayorRevealConfirm, onAskMayorReveal, onCancelMayorReveal, onConfirmMayorReveal,
 }) {
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const timer = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
   const living = players.filter((player) => player.isAlive);
 
-  const playerOption = (player, mode = 'night') => {
+  useEffect(() => {
+    if (phase !== 'NIGHT') setTargetPickerOpen(false);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!targetPickerOpen) return undefined;
+    const closeOnEscape = (event) => event.key === 'Escape' && setTargetPickerOpen(false);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [targetPickerOpen]);
+
+  const playerOption = (player, mode = 'night', onSelect = null) => {
     const selected = mode === 'night'
       ? nightTarget === player.userId || nightSecondaryTarget === player.userId
       : myVote === player.userId;
@@ -1660,7 +1662,7 @@ function PhaseCenterStage({
         key={player.userId}
         className={`phase-player-option mode-${mode} ${selected ? 'selected' : ''} ${teammate ? 'mafia-known' : ''} ${player.mayorRevealed ? 'mayor-revealed' : ''}`}
         disabled={!enabled}
-        onClick={() => enabled && clickPlayer(player)}
+        onClick={() => enabled && (onSelect ? onSelect(player) : clickPlayer(player))}
       >
         <span className="phase-player-avatar">
           {avatarUrl
@@ -1680,6 +1682,22 @@ function PhaseCenterStage({
     const powerExhausted = Boolean(ability && ability.remaining <= 0);
     const canAct = phase === 'NIGHT' && NIGHT_ACTION_ROLES.includes(role?.role) && isAlive && !powerExhausted;
     const isResolving = phase === 'NIGHT_RESOLVE';
+    const targetablePlayers = living.filter(canTargetPlayer);
+    const selectedTargetNames = [nightTarget, nightSecondaryTarget]
+      .filter(Boolean)
+      .map((targetId) => players.find((player) => player.userId === targetId)?.username)
+      .filter(Boolean);
+    const needsSecondTarget = role?.role === 'BUS_DRIVER' && nightTarget && !nightSecondaryTarget;
+    const targetPickerTitle = role?.role === 'BUS_DRIVER'
+      ? needsSecondTarget ? 'CHOISIS LE SECOND PASSAGER' : 'CHOISIS DEUX PASSAGERS'
+      : 'CHOISIS TA CIBLE';
+    const targetSummary = selectedTargetNames.length ? selectedTargetNames.join('  ↔  ') : 'AUCUNE CIBLE SÉLECTIONNÉE';
+    const selectNightTarget = (player) => {
+      const completesSelection = role?.role !== 'BUS_DRIVER'
+        || Boolean(nightTarget && !nightSecondaryTarget && nightTarget !== player.userId);
+      clickPlayer(player);
+      if (completesSelection) setTargetPickerOpen(false);
+    };
     return (
       <section
         className={`phase-stage night-role-stage night-set-${theme.set}`}
@@ -1714,7 +1732,7 @@ function PhaseCenterStage({
               </div>
             )}
           </article>
-          <article className="night-action-card">
+          <article className={`night-action-card ${canAct && role?.role !== 'VETERAN' ? 'night-target-launcher' : ''}`}>
             {isResolving ? (
               <div className="night-passive-state"><span className="stage-hourglass">⌛</span><small>ACTION EN COURS</small><h3>LA NUIT S’ACHÈVE</h3><p>Les actions sont en train d’être résolues.</p></div>
             ) : canAct && role?.role === 'VETERAN' ? (
@@ -1738,8 +1756,16 @@ function PhaseCenterStage({
               </div>
             ) : canAct ? (
               <>
-                <div className="night-action-title"><span>{role?.role === 'BUS_DRIVER' ? 'SÉLECTIONNE DEUX JOUEURS' : 'SÉLECTIONNE UNE CIBLE'}</span><b>{ability ? `${ability.remaining}/${ability.max} ${ability.label}` : `${living.filter(canTargetPlayer).length} choix`}</b></div>
-                <div className="phase-player-grid">{living.map((player) => playerOption(player))}</div>
+                <div className="night-action-title"><span>{role?.role === 'BUS_DRIVER' ? 'ACTION À DEUX CIBLES' : 'ACTION CIBLÉE'}</span><b>{ability ? `${ability.remaining}/${ability.max} ${ability.label}` : `${targetablePlayers.length} choix`}</b></div>
+                <button type="button" className="night-target-open-button" onClick={() => setTargetPickerOpen(true)}>
+                  <span className="night-target-open-icon" aria-hidden="true">⌖</span>
+                  <span className="night-target-open-copy">
+                    <small>{selectedTargetNames.length ? 'CIBLE ACTUELLE' : 'MISSION EN ATTENTE'}</small>
+                    <strong>{needsSecondTarget ? 'CHOISIR LA SECONDE CIBLE' : selectedTargetNames.length ? targetSummary : targetPickerTitle}</strong>
+                    <em>{needsSecondTarget ? `Première cible : ${selectedTargetNames[0]}` : selectedTargetNames.length ? 'Clique pour modifier ton choix' : 'Ouvre la liste des joueurs disponibles'}</em>
+                  </span>
+                  <b>{selectedTargetNames.length ? 'MODIFIER' : 'OUVRIR'} <i>→</i></b>
+                </button>
                 <div className={`night-confirm-state ${actionConfirmed ? 'confirmed' : ''} ${actionFeedback?.status === 'denied' ? 'denied' : ''}`}>
                   <span>{actionFeedback?.status === 'denied' ? '⚠ ACTION REFUSÉE' : actionConfirmed ? '✓ ACTION SCELLÉE' : theme.action}</span>
                   <small>{role?.role === 'BUS_DRIVER' && nightTarget && !nightSecondaryTarget
@@ -1779,6 +1805,31 @@ function PhaseCenterStage({
             )}
           </article>
         </div>
+        {targetPickerOpen && canAct && role?.role !== 'VETERAN' && createPortal(
+          <div className="night-target-picker-backdrop" onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setTargetPickerOpen(false);
+          }}>
+            <section className="night-target-picker-modal" role="dialog" aria-modal="true" aria-labelledby="night-target-picker-title" style={{ '--role-accent': theme.accent }}>
+              <header>
+                <div>
+                  <small>NUIT {round} · {ROLE_LABELS[role?.role] ?? role?.role}</small>
+                  <h2 id="night-target-picker-title">{targetPickerTitle}</h2>
+                  <p>{theme.copy}</p>
+                </div>
+                <button type="button" onClick={() => setTargetPickerOpen(false)} aria-label="Fermer la sélection">×</button>
+              </header>
+              <div className="night-target-picker-meta"><span>{targetablePlayers.length} CIBLES DISPONIBLES</span><b>{role?.role === 'BUS_DRIVER' ? 'ORDRE 1 → 2' : theme.action}</b></div>
+              <div className="phase-player-grid night-target-picker-grid">
+                {living.map((player) => playerOption(player, 'night', selectNightTarget))}
+              </div>
+              <footer>
+                <div><small>{role?.role === 'BUS_DRIVER' ? 'TRAJET ACTUEL' : 'CIBLE ACTUELLE'}</small><strong>{targetSummary}</strong></div>
+                <button type="button" onClick={() => setTargetPickerOpen(false)}>FERMER</button>
+              </footer>
+            </section>
+          </div>,
+          document.body,
+        )}
       </section>
     );
   }
