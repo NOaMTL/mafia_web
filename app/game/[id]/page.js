@@ -49,6 +49,7 @@ const PHASE_SLATES = {
 };
 
 // Illustrations de rôle (mêmes visuels que le guide).
+const ROLE_BY_KEY = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r]));
 const ROLE_ART = Object.fromEntries(ROLE_GUIDE.map((r) => [r.key, r.image]));
 
 const NIGHT_PROMPTS = {
@@ -842,6 +843,8 @@ export default function GamePage() {
 
   // ═══ Role reveal ═══
   if (phase === 'ROLE_REVEAL') {
+    const roleGuideEntry = ROLE_BY_KEY[role?.role];
+    const revealAccent = roleGuideEntry?.color ?? (role?.team === 'MAFIA' ? '#d45147' : '#d0a04c');
     return (
       <main className="role-reveal-screen">
         <NightVideoBackdrop disabled={accessibility.reducedMotion || visualTheme === 'light'} />
@@ -850,53 +853,64 @@ export default function GamePage() {
           {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
         </div>
         {role ? (
-          <section className={`role-reveal-stage ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}>
+          <section
+            className={`role-reveal-stage ${role.team === 'MAFIA' ? 'mafia' : 'village'}`}
+            style={{ '--reveal-accent': revealAccent }}
+          >
             <div className="reveal-kicker"><span /> VOTRE IDENTITÉ POUR CETTE NUIT <span /></div>
 
             <div className="role-card-wrap">
               <div className="role-card-aura" aria-hidden="true" />
               <div className="role-reveal-card">
-                <i className="card-corner corner-tl" /><i className="card-corner corner-tr" />
-                <i className="card-corner corner-bl" /><i className="card-corner corner-br" />
-                {/* Illustration plein cadre + voile dégradé (même recette que /guide) */}
                 {ROLE_ART[role.role] && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img className="role-reveal-art" src={ROLE_ART[role.role]} alt="" decoding="async" />
                 )}
                 <div className="role-reveal-scrim" aria-hidden="true" />
-                <div className="role-card-classified">DOSSIER CONFIDENTIEL · TOUR {round}</div>
-                <div className="role-reveal-copy">
-                  <div className="role-overline">VOUS ÊTES</div>
-                  <h1 className="role-name">{(ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>
-                  <div className="role-team-name">
-                    {role.team === 'MAFIA' ? 'FAMILLE MAFIA' : 'ALLIANCE TOWN'}
+                <div className="role-reveal-overlay">
+                  <div className="role-reveal-topline">
+                    <span><i />{role.team === 'MAFIA' ? 'MAFIA' : 'VILLE'}</span>
+                    <b>LG-{String(round).padStart(2, '0')}</b>
                   </div>
-                  <div className="role-divider"><span>◆</span></div>
-                  <p>{role.description}</p>
-                  {role.team === 'MAFIA' && (
-                    <div className="mafia-accomplices">
-                      <div className="accomplices-title">
-                        <span>VOS COMPLICES</span>
-                        <small>{mafiaTeammates.length + 1} MEMBRES</small>
-                      </div>
-                      {mafiaTeammates.length > 0 ? (
-                        <div className="accomplices-list">
-                          {mafiaTeammates.map((mate) => (
-                            <div key={mate.userId} className="accomplice">
-                              <span className="accomplice-mark">◆</span>
-                              <div>
-                                <strong>{mate.username}</strong>
-                                <small>{ROLE_LABELS[mate.role] ?? mate.role}{mate.isBot ? ' · BOT' : ''}</small>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="accomplices-empty">Vous êtes le seul membre de la Mafia.</p>
-                      )}
+                  <div className="role-reveal-copy">
+                    <div className="role-reveal-kicker">DOSSIER DE RÔLE · IDENTITÉ CONFIDENTIELLE</div>
+                    <h1 className="role-name">{(roleGuideEntry?.name ?? ROLE_LABELS[role.role] ?? role.role).toUpperCase()}</h1>
+                    <div className="role-team-name">
+                      {role.team === 'MAFIA' ? '◆ FAMILLE MAFIA' : '✦ ALLIANCE TOWN'}
                     </div>
-                  )}
-                  <div className="role-secret">NE RÉVÉLEZ VOTRE IDENTITÉ À PERSONNE</div>
+                    <p>{role.description || roleGuideEntry?.description}</p>
+
+                    <div className="role-reveal-power">
+                      <span>{roleGuideEntry?.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</span>
+                      <strong>{roleGuideEntry?.nightAction ?? roleGuideEntry?.tip ?? 'Observe, déduis et vote avec la ville.'}</strong>
+                    </div>
+
+                    {role.team === 'MAFIA' && (
+                      <div className="mafia-accomplices">
+                        <div className="accomplices-title">
+                          <span>VOS COMPLICES</span>
+                          <small>{mafiaTeammates.length + 1} MEMBRE{mafiaTeammates.length > 0 ? 'S' : ''}</small>
+                        </div>
+                        {mafiaTeammates.length > 0 ? (
+                          <div className="accomplices-list">
+                            {mafiaTeammates.map((mate) => (
+                              <div key={mate.userId} className="accomplice">
+                                <span className="accomplice-mark">◆</span>
+                                <div>
+                                  <strong>{mate.username}</strong>
+                                  <small>{ROLE_LABELS[mate.role] ?? mate.role}{mate.isBot ? ' · BOT' : ''}</small>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="accomplices-empty">Vous êtes le seul membre de la Mafia.</p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="role-secret"><span>◈</span> NE RÉVÉLEZ VOTRE IDENTITÉ À PERSONNE</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1051,6 +1065,27 @@ export default function GamePage() {
         </div>
 
         <div className="right">
+          {intelLog.length > 0 && (
+            <button
+              type="button"
+              className={`topbar-intel ${intelOpen ? 'active' : ''}`}
+              aria-expanded={intelOpen}
+              aria-controls="intel-drawer"
+              onClick={() => {
+                intelSeenCount.current = intelLog.length;
+                setSettingsOpen(false);
+                setPanelOpen(false);
+                setRoleCardOpen(false);
+                setIntelOpen(true);
+              }}
+            >
+              <span className="topbar-intel-icon" aria-hidden="true">🗂</span>
+              <span><small>CARNET PRIVÉ</small><b>{intelLog.length} INTEL</b></span>
+              {!intelOpen && intelLog.length > intelSeenCount.current && (
+                <em>{intelLog.length - intelSeenCount.current}</em>
+              )}
+            </button>
+          )}
           {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
             <button
               className={`topbar-skip ${hasSkipped ? 'voted' : ''}`}
@@ -1210,7 +1245,10 @@ export default function GamePage() {
             castVerdict={castVerdict}
           />
           <DossierQuickAccess
-            onOpen={() => setPanelOpen(true)}
+            onOpen={() => {
+              setIntelOpen(false);
+              setPanelOpen(true);
+            }}
           />
           {isSilenced && <CentralStatusEffect kind="blackmailed" icon="🤐" title="RÉDUIT AU SILENCE" detail="Chat public verrouillé · vote toujours disponible" />}
           {!isAlive && (
@@ -1452,7 +1490,10 @@ export default function GamePage() {
 
           {/* Ton rôle */}
           {role && (
-            <button type="button" className="panel-card role-panel role-card-launcher" onClick={() => setRoleCardOpen(true)}>
+            <button type="button" className="panel-card role-panel role-card-launcher" onClick={() => {
+              setIntelOpen(false);
+              setRoleCardOpen(true);
+            }}>
               <span className="role-launch-card" aria-hidden="true"><i>?</i></span>
               <span className="role-launch-copy">
                 <small>TON RÔLE</small>
@@ -1483,6 +1524,24 @@ export default function GamePage() {
             <small>{t.label}</small>
           </button>
         ))}
+        {intelLog.length > 0 && (
+          <button
+            type="button"
+            className={`mobile-intel-tab ${intelOpen ? 'active' : ''}`}
+            aria-expanded={intelOpen}
+            aria-controls="intel-drawer"
+            onClick={() => {
+              intelSeenCount.current = intelLog.length;
+              setIntelOpen(true);
+            }}
+          >
+            <span aria-hidden="true">🗂</span>
+            {!intelOpen && intelLog.length > intelSeenCount.current && (
+              <b className="mobile-intel-badge">{intelLog.length - intelSeenCount.current}</b>
+            )}
+            <small>INTEL</small>
+          </button>
+        )}
       </nav>
 
       {/* ── Dossier de partie (drawer) ── */}
@@ -1512,43 +1571,8 @@ export default function GamePage() {
       )}
 
       {/* ── Carnet de renseignements : résultats persistants des actions ── */}
-      {intelLog.length > 0 && (
-        <>
-          <button type="button"
-                  className={`intel-tab ${intelOpen ? 'open' : ''}`}
-                  onClick={() => {
-                    setIntelOpen((open) => {
-                      if (!open) intelSeenCount.current = intelLog.length;
-                      return !open;
-                    });
-                  }}>
-            🗂
-            {!intelOpen && intelLog.length > intelSeenCount.current && (
-              <b className="intel-badge">{intelLog.length - intelSeenCount.current}</b>
-            )}
-            <small>INTEL</small>
-          </button>
-          {intelOpen && (
-            <aside className="intel-drawer" aria-label="Résultats de vos actions">
-              <header>
-                <strong>🗂 RENSEIGNEMENTS</strong>
-                <span>{intelLog.length} rapport{intelLog.length > 1 ? 's' : ''}</span>
-                <button onClick={() => setIntelOpen(false)} aria-label="Fermer">✕</button>
-              </header>
-              <div className="intel-list">
-                {[...intelLog].reverse().map((entry) => (
-                  <article key={entry.id} className={`intel-entry tone-${entry.tone}`}>
-                    <span className="intel-icon">{entry.icon}</span>
-                    <div>
-                      <div className="intel-title">{entry.title} <b>N{entry.round}</b></div>
-                      <p>{entry.message}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </aside>
-          )}
-        </>
+      {intelOpen && intelLog.length > 0 && (
+        <IntelDrawer entries={intelLog} onClose={() => setIntelOpen(false)} />
       )}
 
       {/* ── Onboarding première partie : coach marks une seule fois ── */}
@@ -1848,6 +1872,62 @@ function ActionFlash({ data }) {
   );
 }
 
+function IntelDrawer({ entries, onClose }) {
+  const reports = [...entries].reverse();
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="intel-drawer-layer">
+      <button className="intel-drawer-backdrop" type="button" onClick={onClose} aria-label="Fermer le carnet de renseignements" />
+      <aside id="intel-drawer" className="intel-drawer" role="dialog" aria-modal="true" aria-labelledby="intel-drawer-title">
+        <header className="intel-drawer-header">
+          <div className="intel-drawer-heading">
+            <span aria-hidden="true">🗂</span>
+            <div>
+              <small>CARNET PRIVÉ · CONSULTATION SECRÈTE</small>
+              <h2 id="intel-drawer-title">RENSEIGNEMENTS</h2>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fermer le carnet" autoFocus>✕</button>
+        </header>
+
+        <div className="intel-drawer-summary">
+          <span className="intel-summary-mark" aria-hidden="true">◈</span>
+          <p><strong>{entries.length} rapport{entries.length > 1 ? 's' : ''} sécurisé{entries.length > 1 ? 's' : ''}</strong>Les résultats de tes actions sont conservés ici pendant toute la partie.</p>
+        </div>
+
+        <div className="intel-list-heading"><span>RAPPORTS COLLECTÉS</span><small>PLUS RÉCENT D’ABORD</small></div>
+        <div className="intel-list">
+          {reports.map((entry, index) => (
+            <article key={entry.id} className={`intel-entry tone-${entry.tone ?? 'info'} ${index === 0 ? 'latest' : ''}`}>
+              <div className="intel-entry-meta">
+                <span>{index === 0 ? 'DERNIER RAPPORT' : 'RAPPORT CONFIDENTIEL'}</span>
+                <time>NUIT {entry.round}</time>
+              </div>
+              <div className="intel-entry-content">
+                <span className="intel-icon" aria-hidden="true">{entry.icon}</span>
+                <div>
+                  <h3 className="intel-title">{entry.title}</h3>
+                  <p>{entry.message}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <footer className="intel-drawer-footer"><span aria-hidden="true">⌁</span> VISIBLE UNIQUEMENT PAR TOI</footer>
+      </aside>
+    </div>
+  );
+}
+
 function NightResultReveal({ data }) {
   return (
     <div className={`night-result-reveal tone-${data.tone ?? 'info'}`} role="status">
@@ -1861,9 +1941,12 @@ function NightResultReveal({ data }) {
 function DeathTransition({ role, onDismiss }) {
   return (
     <div className="death-transition" role="dialog" aria-modal="true" aria-label="Vous avez été éliminé">
+      <div className="death-cemetery" aria-hidden="true">
+        {Array.from({ length: 9 }, (_, index) => <i key={index} />)}
+      </div>
       <div className="death-fog" aria-hidden="true"><i /><i /><i /></div>
       <section>
-        <span className="death-soul" aria-hidden="true">♙</span>
+        <span className="death-soul" aria-hidden="true">†</span>
         <small>LE MONDE DES VIVANTS S’ÉLOIGNE</small>
         <h1>VOUS ÊTES MORT</h1>
         <p>Votre rôle était <b>{ROLE_LABELS[role] ?? role ?? 'inconnu'}</b>. La partie continue : observez la ville et échangez avec les autres morts.</p>
