@@ -1119,8 +1119,10 @@ export default function GamePage() {
       {/* ── Carton de transition de phase ── */}
       {phaseSlate && !accessibility.reducedMotion && (
         <div key={phaseSlate.id} className={`phase-slate tone-${phaseSlate.phase === 'NIGHT' ? 'night' : 'day'}`} aria-hidden="true">
+          <span className="phase-slate-halo" />
           <span className="phase-slate-icon">{phaseSlate.icon}</span>
           <strong>{phaseSlate.title}</strong>
+          <span className="phase-slate-line" />
           <em>{phaseSlate.sub}</em>
         </div>
       )}
@@ -1144,19 +1146,6 @@ export default function GamePage() {
             </>
           )}
         </div>
-      )}
-
-      {/* ── Fil des événements du jour ── */}
-      {dayFeed.length > 0 && (
-        <button type="button" className="day-feed" title="Ouvrir le journal complet"
-                onClick={() => setPanelOpen(true)}>
-          {dayFeed.slice(-6).map((ev) => (
-            <span key={ev.id} className="day-feed-chip">
-              <i>{ev.icon}</i> {ev.text}
-            </span>
-          ))}
-          <span className="day-feed-more">JOURNAL →</span>
-        </button>
       )}
 
       {/* ── Main : chat | table | rail ── */}
@@ -1497,6 +1486,7 @@ export default function GamePage() {
         setWill={setWill}
         onSaveWill={saveWill}
         log={gameLog}
+        dayFeed={dayFeed}
       />
 
       {roleCardOpen && role && (

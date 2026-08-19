@@ -26,7 +26,7 @@ const SUSPICIONS = ['?', 'TOWN', 'MAFIA', ...ROLE_GUIDE.map((role) => role.key)]
 export default function GamePanel({
   open, onClose, players, myId, myRole, round,
   notes, onUpdateNote,
-  will, setWill, onSaveWill, log,
+  will, setWill, onSaveWill, log, dayFeed = [],
 }) {
   const [tab, setTab] = useState(0);
   const activeTab = Math.min(tab, 3);
@@ -56,7 +56,7 @@ export default function GamePanel({
             <PlayersTab players={players} myId={myId} notes={notes} onUpdateNote={onUpdateNote} />
           )}
           {activeTab === 1 && <WillTab will={will} setWill={setWill} onSave={onSaveWill} />}
-          {activeTab === 2 && <LogTab log={log} />}
+          {activeTab === 2 && <LogTab log={log} dayFeed={dayFeed} />}
           {activeTab === 3 && <RolesTab myRole={myRole} />}
         </div>
 
@@ -156,12 +156,24 @@ function WillTab({ will, setWill, onSave }) {
 
 // ─── Tab: log ─────────────────────────────────────────────────────────────────
 
-function LogTab({ log }) {
-  if (log.length === 0) {
+function LogTab({ log, dayFeed = [] }) {
+  if (log.length === 0 && dayFeed.length === 0) {
     return <p className="dim" style={{ fontStyle: 'italic' }}>Aucun événement pour l&apos;instant.</p>;
   }
   return (
     <div>
+      {dayFeed.length > 0 && (
+        <div className="dossier-day-feed">
+          <div className="dossier-feed-title">FAITS MARQUANTS</div>
+          <div className="dossier-feed-chips">
+            {dayFeed.map((ev) => (
+              <span key={ev.id} className="day-feed-chip">
+                <i>{ev.icon}</i> {ev.text} <b>T{ev.round}</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {log.map((entry, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0',
                               borderBottom: '1px solid var(--line)', fontSize: 14 }}>
