@@ -47,9 +47,14 @@ export default function NavHeader({ session, diamonds }) {
           </Link>
         ))}
         {isAdmin && (
-          <Link className={`nav-link nav-admin-link ${isActive('/admin') ? 'active' : ''}`}
-                aria-current={isActive('/admin') ? 'page' : undefined} href="/admin"
-                onClick={() => setMenuOpen(false)}>ADMIN</Link>
+          <>
+            <Link className={`nav-link nav-admin-link ${isActive('/ui-lab') ? 'active' : ''}`}
+                  aria-current={isActive('/ui-lab') ? 'page' : undefined} href="/ui-lab"
+                  onClick={() => setMenuOpen(false)}>UI LAB</Link>
+            <Link className={`nav-link nav-admin-link ${isActive('/admin') ? 'active' : ''}`}
+                  aria-current={isActive('/admin') ? 'page' : undefined} href="/admin"
+                  onClick={() => setMenuOpen(false)}>ADMIN</Link>
+          </>
         )}
       </nav>
 

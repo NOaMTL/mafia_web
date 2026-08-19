@@ -72,6 +72,8 @@ const NIGHT_PROMPTS = {
 
 const NIGHT_ACTION_ROLES = ['MAFIOSO', 'GODFATHER', 'SHERIFF', 'DETECTIVE', 'INVESTIGATOR', 'CONSIGLIERE', 'DOCTOR', 'VIGILANTE', 'ESCORT', 'BLACKMAILER', 'JANITOR', 'FRAMER', 'LOOKOUT', 'BODYGUARD', 'CONSORT', 'BUS_DRIVER', 'VETERAN'];
 const DAY_PHASES = ['MORNING_GAZETTE', 'DAY_DISCUSSION', 'DAY_VOTE', 'TRIAL', 'JUDGMENT', 'SENTENCE'];
+const TOAST_DURATION = 12_000;
+const IMPORTANT_MESSAGE_DURATION = 15_000;
 const MAFIA_ROLES = new Set(['GODFATHER', 'MAFIOSO', 'CONSIGLIERE', 'CONSORT', 'BLACKMAILER', 'JANITOR', 'FRAMER']);
 
 function stableAvatarUrl(player, avatarMap) {
@@ -151,14 +153,12 @@ export default function GamePage() {
   // onglets bas et resynchronisée sur les phases clés.
   const [mobileTab, setMobileTab] = useState('table');
   const [phaseSlate, setPhaseSlate] = useState(null);     // carton de transition
-  const [verdictSlate, setVerdictSlate] = useState(null); // mise en scène du verdict
   const [dayFeed, setDayFeed] = useState([]);             // fil des événements
   const [coachSeen, setCoachSeen] = useState(null);       // onboarding (null = pas chargé)
   const [intelLog, setIntelLog] = useState([]);           // résultats persistants des actions
   const [intelOpen, setIntelOpen] = useState(false);
   const intelSeenCount = useRef(0);
   const phaseSlateTimer = useRef(null);
-  const verdictTimers = useRef([]);
   const [topMenuOpen, setTopMenuOpen] = useState(false); // menu ☰ mobile
   const [chatMessages, setChatMessages] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -194,6 +194,7 @@ export default function GamePage() {
 
   const socketRef = useRef(null);
   const noteTimers = useRef({});
+  const toastTimers = useRef(new Map());
   const toastId   = useRef(0);
   const actionFlashTimer = useRef(null);
   const nightRevealTimer = useRef(null);
@@ -237,10 +238,21 @@ export default function GamePage() {
     setGameLog((l) => [...l, { icon, text, round: roundRef.current }]);
   }, []);
 
-  const toast = useCallback((text) => {
+  const dismissToast = useCallback((id) => {
+    const timer = toastTimers.current.get(id);
+    if (timer) clearTimeout(timer);
+    toastTimers.current.delete(id);
+    setToasts((current) => current.filter((entry) => entry.id !== id));
+  }, []);
+
+  const toast = useCallback((text, { duration = TOAST_DURATION, tone = 'info' } = {}) => {
     const tid = ++toastId.current;
-    setToasts((t) => [...t, { id: tid, text }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== tid)), 5000);
+    setToasts((current) => [...current.slice(-3), { id: tid, text, tone }]);
+    const timer = setTimeout(() => {
+      toastTimers.current.delete(tid);
+      setToasts((current) => current.filter((entry) => entry.id !== tid));
+    }, duration);
+    toastTimers.current.set(tid, timer);
   }, []);
 
   const showNextAffectedEffect = useCallback(() => {
@@ -257,7 +269,7 @@ export default function GamePage() {
       affectedEffectActive.current = false;
       setAffectedEffect(null);
       affectedEffectGapTimer.current = setTimeout(() => affectedEffectRunner.current(), 140);
-    }, next.duration ?? 5200);
+    }, next.duration ?? IMPORTANT_MESSAGE_DURATION);
   }, []);
   affectedEffectRunner.current = showNextAffectedEffect;
 
@@ -272,6 +284,11 @@ export default function GamePage() {
     setAffectedEffect(null);
     clearTimeout(affectedEffectGapTimer.current);
     affectedEffectGapTimer.current = setTimeout(() => affectedEffectRunner.current(), 140);
+  }, []);
+
+  const dismissNightReveal = useCallback(() => {
+    clearTimeout(nightRevealTimer.current);
+    setNightReveal(null);
   }, []);
 
   // ── Socket wiring ───────────────────────────────────────────────────────────
@@ -360,29 +377,17 @@ export default function GamePage() {
     };
     const onTrial    = (d) => { setTrial(d); addLog('⚖️', `${d.accusedUsername} envoyé au procès.`); pushFeed('⚖️', `${d.accusedUsername} accusé`); };
     const onJudgVotes = (d) => setJudgment(d);
-    const playVerdict = (result) => {
-      verdictTimers.current.forEach(clearTimeout);
-      setVerdictSlate({ stage: 'suspense' });
-      verdictTimers.current = [
-        setTimeout(() => {
-          setVerdictSlate({ stage: 'result', ...result });
-          if (result.type === 'executed') sounds.gavel(); else sounds.spirit();
-        }, 1150),
-        setTimeout(() => setVerdictSlate(null), 4200),
-      ];
-    };
     const onExec     = (d) => {
       setSentence({ type: 'executed', username: d.username, role: d.role, will: d.will });
       addLog('🔨', `${d.username} exécuté — ${d.role}`);
       pushFeed('🔨', `${d.username} exécuté`);
-      playVerdict({ type: 'executed', username: d.username, role: d.role });
       sounds.death();
     };
     const onAcquit   = ()  => {
       setSentence({ type: 'acquitted' });
       addLog('🕊️', 'Accusé acquitté.');
       pushFeed('🕊️', 'Acquitté');
-      playVerdict({ type: 'acquitted' });
+      sounds.spirit();
     };
     const onOver     = (d) => {
       setWinner(d);
@@ -393,7 +398,7 @@ export default function GamePage() {
     const revealNight = (icon, title, message, tone = 'info') => {
       setNightReveal({ id: Date.now(), icon, title, message, tone });
       clearTimeout(nightRevealTimer.current);
-      nightRevealTimer.current = setTimeout(() => setNightReveal(null), 5200);
+      nightRevealTimer.current = setTimeout(() => setNightReveal(null), IMPORTANT_MESSAGE_DURATION);
       // Le popup est éphémère — le carnet de renseignements, lui, garde tout.
       setIntelLog((prev) => [...prev.slice(-39), {
         id: Date.now() + Math.random(), icon, title, message, tone, round: roundRef.current,
@@ -484,7 +489,7 @@ export default function GamePage() {
         title: 'QUELQU’UN EST VENU',
         message: 'Vous avez perçu une présence, mais ni son identité, ni son rôle, ni ses intentions ne vous sont révélés. Ce peut être une attaque… comme un protecteur ou un simple enquêteur venu vous observer.',
         consequence: 'UNE VISITE A EU LIEU · RESTEZ PRUDENT',
-        duration: 3400,
+        duration: 18_000,
       });
     };
     const onChatBlocked = (d) => {
@@ -568,6 +573,8 @@ export default function GamePage() {
       clearTimeout(nightRevealTimer.current);
       clearTimeout(affectedEffectTimer.current);
       clearTimeout(affectedEffectGapTimer.current);
+      toastTimers.current.forEach(clearTimeout);
+      toastTimers.current.clear();
       affectedEffectQueue.current = [];
       affectedEffectActive.current = false;
       Object.values(noteTimers.current).forEach(clearTimeout);
@@ -595,6 +602,7 @@ export default function GamePage() {
   const selfHealResource = role?.resources?.find((resource) => resource.key === 'selfHeal');
   const limitedPowerExhausted = Boolean(abilityResource && abilityResource.remaining <= 0);
   const hasSkipped = Boolean(skipInfo?.voterIds?.includes(session?.userId));
+  const skipRequired = skipInfo?.required ?? (skipInfo?.total ? Math.floor(skipInfo.total / 2) + 1 : null);
 
   const canActAtNight =
     phase === 'NIGHT' && isAlive && role && NIGHT_ACTION_ROLES.includes(role.role) && !limitedPowerExhausted;
@@ -967,8 +975,8 @@ export default function GamePage() {
           <i /><i /><i /><i /><i />
         </div>
         {affectedEffect && <AffectedActionReveal data={affectedEffect} onDismiss={dismissAffectedEffect} />}
-        {nightReveal && <NightResultReveal data={nightReveal} />}
-        <ToastZone toasts={toasts} />
+        {nightReveal && <NightResultReveal data={nightReveal} onDismiss={dismissNightReveal} />}
+        <ToastZone toasts={toasts} onDismiss={dismissToast} />
       </main>
     );
   }
@@ -1039,7 +1047,7 @@ export default function GamePage() {
       )}
       {actionFlash && <ActionFlash data={actionFlash} />}
       {affectedEffect && <AffectedActionReveal data={affectedEffect} onDismiss={dismissAffectedEffect} />}
-      {nightReveal && <NightResultReveal data={nightReveal} />}
+      {nightReveal && <NightResultReveal data={nightReveal} onDismiss={dismissNightReveal} />}
       {/* ── Top bar ── */}
       <div className="game-topbar">
         <div className="left">
@@ -1094,7 +1102,7 @@ export default function GamePage() {
               onClick={() => send('phase:skip_vote', {})}
             >
               <span>⏭</span>
-              <b>{hasSkipped ? 'PHASE PASSÉE' : skipInfo ? `PASSER · ${skipInfo.count}/${skipInfo.total}` : 'PASSER'}</b>
+              <b>{hasSkipped ? 'VOTE ENREGISTRÉ' : skipInfo ? `PASSER · ${skipInfo.count}/${skipRequired}` : 'PASSER'}</b>
             </button>
           )}
           <div className={`timer-chip ${remaining <= 10 && remaining > 0 ? 'urgent' : ''}`}>
@@ -1131,7 +1139,7 @@ export default function GamePage() {
               {isAlive && DAY_PHASES.includes(phase) && phase !== 'JUDGMENT' && (
                 <button disabled={hasSkipped}
                         onClick={() => { send('phase:skip_vote', {}); setTopMenuOpen(false); }}>
-                  ⏭ {hasSkipped ? 'Phase passée' : skipInfo ? `Passer la phase · ${skipInfo.count}/${skipInfo.total}` : 'Passer la phase'}
+                  ⏭ {hasSkipped ? 'Vote enregistré' : skipInfo ? `Passer la phase · ${skipInfo.count}/${skipRequired}` : 'Passer la phase'}
                 </button>
               )}
               <button onClick={() => {
@@ -1172,27 +1180,6 @@ export default function GamePage() {
           <strong>{phaseSlate.title}</strong>
           <span className="phase-slate-line" />
           <em>{phaseSlate.sub}</em>
-        </div>
-      )}
-
-      {/* ── Mise en scène du verdict ── */}
-      {verdictSlate && (
-        <div className={`verdict-slate ${verdictSlate.stage}`} aria-live="assertive">
-          {verdictSlate.stage === 'suspense' ? (
-            <strong className="verdict-suspense">LE VERDICT…</strong>
-          ) : verdictSlate.type === 'executed' ? (
-            <>
-              <span className="verdict-icon">🔨</span>
-              <strong className="verdict-guilty">COUPABLE</strong>
-              <em>{verdictSlate.username} — {ROLE_LABELS[verdictSlate.role] ?? verdictSlate.role}</em>
-            </>
-          ) : (
-            <>
-              <span className="verdict-icon">🕊️</span>
-              <strong className="verdict-innocent">ACQUITTÉ</strong>
-              <em>Le doute a profité à l’accusé</em>
-            </>
-          )}
         </div>
       )}
 
@@ -1243,6 +1230,10 @@ export default function GamePage() {
             myVerdict={myVerdict}
             judgment={judgment}
             castVerdict={castVerdict}
+            skipInfo={skipInfo}
+            skipRequired={skipRequired}
+            hasSkipped={hasSkipped}
+            onSkipPhase={() => send('phase:skip_vote', {})}
           />
           <DossierQuickAccess
             onOpen={() => {
@@ -1595,7 +1586,7 @@ export default function GamePage() {
         </div>
       )}
 
-      <ToastZone toasts={toasts} />
+      <ToastZone toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
@@ -1616,7 +1607,7 @@ function PhaseCenterStage({
   phase, round, remaining, role, players, avatarMap, sessionId, isAlive,
   nightTarget, nightSecondaryTarget, actionConfirmed, actionFeedback, canTargetPlayer, clickPlayer, onVeteranAlert, mafiaTeammateIds,
   gazetteNow, nightMsg, detective, trial, sentence, votes, myVote, myVerdict,
-  judgment, castVerdict,
+  judgment, castVerdict, skipInfo, skipRequired, hasSkipped, onSkipPhase,
 }) {
   const timer = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
   const living = players.filter((player) => player.isAlive);
@@ -1796,6 +1787,21 @@ function PhaseCenterStage({
             <small>PLACE PUBLIQUE · JOUR {round}</small>
             <h1>DISCUSSION EN COURS</h1>
             <p>Le village débat jusqu’à la fin du temps imparti.</p>
+            {isAlive && (
+              <div className={`discussion-skip-vote ${hasSkipped ? 'voted' : ''}`}>
+                <div className="discussion-skip-copy">
+                  <span aria-hidden="true">⏭</span>
+                  <div><small>VOTE COLLECTIF</small><strong>PASSER À LA PHASE SUIVANTE</strong></div>
+                </div>
+                <div className="discussion-skip-progress" aria-label={`${skipInfo?.count ?? 0} vote sur ${skipRequired ?? '—'} requis`}>
+                  <span style={{ width: `${skipRequired ? Math.min(100, ((skipInfo?.count ?? 0) / skipRequired) * 100) : 0}%` }} />
+                </div>
+                <button type="button" disabled={hasSkipped} onClick={onSkipPhase}>
+                  <b>{hasSkipped ? 'VOTE ENREGISTRÉ' : 'VOTER POUR PASSER'}</b>
+                  <small>{skipInfo ? `${skipInfo.count}/${skipRequired} · majorité requise` : 'En attente des votes'}</small>
+                </button>
+              </div>
+            )}
           </div>
           <div className="discussion-lampposts" aria-hidden="true"><i /><i /></div>
         </div>
@@ -1928,12 +1934,13 @@ function IntelDrawer({ entries, onClose }) {
   );
 }
 
-function NightResultReveal({ data }) {
+function NightResultReveal({ data, onDismiss }) {
   return (
-    <div className={`night-result-reveal tone-${data.tone ?? 'info'}`} role="status">
+    <div className={`night-result-reveal tone-${data.tone ?? 'info'}`} role="dialog" aria-label={data.title}>
       <span className="night-result-icon">{data.icon}</span>
       <div><small>INFORMATION PRIVÉE · AJOUTÉE AU DOSSIER</small><strong>{data.title}</strong><p>{data.message}</p></div>
       <i aria-hidden="true">CONFIDENTIEL</i>
+      <button type="button" className="night-result-dismiss" onClick={onDismiss} aria-label="Fermer cette information">×</button>
     </div>
   );
 }
@@ -2226,11 +2233,16 @@ function ReplayTimeline({ events, players }) {
 
 // ─── Toasts ───────────────────────────────────────────────────────────────────
 
-function ToastZone({ toasts }) {
+function ToastZone({ toasts, onDismiss }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="toast-zone">
-      {toasts.map((t) => <div key={t.id} className="toast">{t.text}</div>)}
+    <div className="toast-zone" aria-live="polite" aria-label="Notifications de partie">
+      {toasts.map((toastEntry) => (
+        <article key={toastEntry.id} className={`toast tone-${toastEntry.tone ?? 'info'}`}>
+          <span>{toastEntry.text}</span>
+          <button type="button" onClick={() => onDismiss(toastEntry.id)} aria-label="Fermer cette notification">×</button>
+        </article>
+      ))}
     </div>
   );
 }
