@@ -561,7 +561,7 @@ export default function Lab3dPage() {
       logoMark.rotation.x = Math.PI / 2;
       logoMark.scaling.y = 0.77;
       const logoMaterial = new B.StandardMaterial('table-logo-material', scene);
-      const logoTexture = new B.Texture('/brand/mafia-logo-gold.png', scene);
+      const logoTexture = new B.Texture('/brand/mafia-logo-flat.png', scene);
       logoTexture.hasAlpha = true;
       logoMaterial.diffuseTexture = logoTexture;
       logoMaterial.opacityTexture = logoTexture;
@@ -1358,7 +1358,7 @@ export default function Lab3dPage() {
 
       <header className={styles.topbar}>
         <div className={styles.brand}>
-          <Image src="/brand/mafia-logo-gold.png" alt="MAFIA" width={106} height={40} priority />
+          <Image src="/brand/mafia-logo-flat.png" alt="MAFIA" width={123} height={40} priority />
           <span>LABORATOIRE 3D</span>
         </div>
 

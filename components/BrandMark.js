@@ -6,10 +6,10 @@ export default function BrandMark({ href = '/', compact = false }) {
     <Link href={href} className={`landing-brand ${compact ? 'compact' : ''}`} aria-label="MAFIA — accueil">
       <Image
         className="brand-logo-image"
-        src="/brand/mafia-logo-gold.png"
+        src="/brand/mafia-logo-flat.png"
         alt="MAFIA"
-        width={2112}
-        height={705}
+        width={1200}
+        height={391}
         priority
         sizes={compact ? '152px' : '190px'}
       />

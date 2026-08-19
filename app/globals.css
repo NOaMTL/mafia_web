@@ -9260,7 +9260,6 @@ html[data-theme="light"] .nav-header-play {
   display: block;
   width: 190px;
   height: auto;
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)) drop-shadow(0 0 8px rgba(207,169,82,.12));
 }
 .landing-brand.compact .brand-logo-image { width: 152px; }
 
