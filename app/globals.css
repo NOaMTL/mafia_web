@@ -9809,3 +9809,22 @@ html[data-theme="light"] .user-menu-item small { color: rgba(48,34,14,.58); }
 .role-reveal-card .role-reveal-copy,
 .role-reveal-card .card-corner { position: relative; z-index: 2; }
 .role-reveal-card .role-reveal-copy { text-shadow: 0 2px 14px rgba(0, 0, 0, .95); }
+
+/* Bouton d'exclusion dans le salon (hôte uniquement). */
+.lobby-kick-btn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-left: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(190, 60, 50, .45);
+  background: rgba(190, 60, 50, .1);
+  color: #d08a7c;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .35;
+  transition: opacity .15s, background .15s;
+}
+.lobby-player-row:hover .lobby-kick-btn { opacity: 1; }
+.lobby-kick-btn:hover { background: rgba(190, 60, 50, .28); color: #ff9a8a; }

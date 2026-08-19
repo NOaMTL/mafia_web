@@ -44,6 +44,12 @@ export default function LobbyWait() {
     socket.on('lobby:player_joined', refresh);
     socket.on('lobby:player_ready',  refresh);
     socket.on('lobby:bot_added',     refresh);
+    socket.on('lobby:player_kicked', refresh);
+    // Le joueur exclu est renvoyé à la liste des parties.
+    socket.on('lobby:kicked', (d) => {
+      alert(d?.message ?? 'Vous avez été exclu du salon.');
+      router.replace('/lobby');
+    });
     socket.on('lobby:chat_message',  (m) => setChatMsgs((p) => [...p.slice(-99), m]));
     socket.on('game:started',        (d) => router.push(`/game/${d.gameId}`));
     socket.on('error',               (d) => setError(d.message ?? 'Erreur'));
@@ -58,7 +64,8 @@ export default function LobbyWait() {
 
     return () => {
       ['lobby:joined', 'lobby:player_joined', 'lobby:player_ready',
-       'lobby:bot_added', 'lobby:chat_message', 'game:started', 'error',
+       'lobby:bot_added', 'lobby:player_kicked', 'lobby:kicked',
+       'lobby:chat_message', 'game:started', 'error',
       ].forEach((e) => socket.off(e));
       socket.off('connect', join);
     };
@@ -94,6 +101,12 @@ export default function LobbyWait() {
 
   function startNow() {
     socketRef.current?.emit('lobby:start', { lobbyId: id });
+  }
+
+  function kickPlayer(player) {
+    const label = player.isBot ? `Retirer ${player.username} (bot) ?` : `Exclure ${player.username} du salon ?`;
+    if (!window.confirm(label)) return;
+    socketRef.current?.emit('lobby:kick', { lobbyId: id, userId: player.userId });
   }
 
   if (!session || !lobby) {
@@ -195,6 +208,11 @@ export default function LobbyWait() {
                     {player.isBot && <b>BOT</b>}
                   </span>
                   <span className={`lobby-ready-state ${player.isReady ? 'ready' : ''}`}><i />{player.isReady ? 'PRÊT' : 'EN ATTENTE'}</span>
+                  {session.userId === lobby.hostId && !isMe && (
+                    <button className="lobby-kick-btn"
+                            title={`Exclure ${player.username}`}
+                            onClick={() => kickPlayer(player)}>✕</button>
+                  )}
                 </article>
               );
             })}

@@ -481,7 +481,7 @@ export default function GamePage() {
       revealAffectedEffect({
         kind: 'visited', icon: '👁️', kicker: 'MOUVEMENT NOCTURNE · PRÉSENCE',
         title: 'QUELQU’UN EST VENU',
-        message: 'Vous avez perçu une présence, mais ni son identité, ni son rôle, ni ses intentions ne vous sont révélés.',
+        message: 'Vous avez perçu une présence, mais ni son identité, ni son rôle, ni ses intentions ne vous sont révélés. Ce peut être une attaque… comme un protecteur ou un simple enquêteur venu vous observer.',
         consequence: 'UNE VISITE A EU LIEU · RESTEZ PRUDENT',
         duration: 3400,
       });
@@ -1244,7 +1244,7 @@ export default function GamePage() {
                 : detective.kind === 'visit'
                   ? <>👣 <b>{detective.targetUsername}</b> a visité <b>{detective.visitedUsername ?? 'personne'}</b>.</>
                   : detective.kind === 'watch'
-                    ? <>👁️ Visiteurs de <b>{detective.targetUsername}</b> : <b>{(detective.visitorUsernames ?? []).join(', ') || 'aucun'}</b>.</>
+                    ? <>👁️ Visiteurs de <b>{detective.targetUsername}</b> : <b>{(detective.visitorUsernames ?? []).join(', ') || 'personne d’autre que vous'}</b>.</>
                     : <>🔍 <b>{detective.targetUsername}</b> est du camp{' '}
                     <b style={{ color: detective.team === 'MAFIA' ? 'var(--red-hi)' : 'var(--blue)' }}>
                       {detective.team === 'MAFIA' ? 'MAFIA' : 'TOWN'}
@@ -2000,7 +2000,7 @@ function getInvestigationText(result) {
   if (result.kind === 'role') text = `${result.targetUsername} est ${ROLE_LABELS[result.role] ?? result.role}.`;
   if (result.kind === 'crimes') text = `${result.targetUsername} : ${(result.crimes ?? []).join(', ') || 'aucun crime connu'}.`;
   if (result.kind === 'visit') text = `${result.targetUsername} a visité ${result.visitedUsername ?? 'personne'}.`;
-  if (result.kind === 'watch') text = `Visiteurs de ${result.targetUsername} : ${(result.visitorUsernames ?? []).join(', ') || 'aucun'}.`;
+  if (result.kind === 'watch') text = `Visiteurs de ${result.targetUsername} : ${(result.visitorUsernames ?? []).join(', ') || 'personne d’autre que vous'}.`;
   if (result.kind === 'spy') text = `La Mafia s’est intéressée à : ${(result.targetUsernames ?? []).join(', ') || 'personne'}.`;
   return text;
 }
