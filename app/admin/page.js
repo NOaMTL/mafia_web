@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { api, clearSession, getSession } from '@/lib/api';
 import BrandMark from '@/components/BrandMark';
 import NavHeader from '@/components/NavHeader';
-import PageHeading from '@/components/PageHeading';
 
 function initials(username) {
   return String(username ?? '?').slice(0, 2).toUpperCase();
@@ -22,6 +21,15 @@ function generatePassword() {
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
 }
+
+const discordStateLabels = {
+  unconfigured: 'Non configuré',
+  stopped: 'Hors ligne',
+  connecting: 'Connexion…',
+  connected: 'En ligne',
+  stopping: 'Arrêt…',
+  error: 'Erreur',
+};
 
 export default function AdminPage() {
   const router = useRouter();
@@ -44,6 +52,9 @@ export default function AdminPage() {
   const [games, setGames] = useState(null);
   const [rolesConfig, setRolesConfig] = useState(null); // { roles, disabled }
   const [openGame, setOpenGame] = useState(null); // détail de partie (roster)
+  const [discordStatus, setDiscordStatus] = useState(null);
+  const [discordBusy, setDiscordBusy] = useState(false);
+  const [discordError, setDiscordError] = useState('');
   const pageSize = 30;
 
   const loadUsers = useCallback(async (targetPage, query) => {
@@ -79,6 +90,7 @@ export default function AdminPage() {
         loadUsers(1, '');
         api.adminListGames(60).then(setGames).catch(() => setGames([]));
         api.adminGetRoles().then(setRolesConfig).catch(() => {});
+        api.adminGetDiscord().then(setDiscordStatus).catch((requestError) => setDiscordError(requestError.message));
       })
       .catch((requestError) => {
         setAccess(requestError.status === 403 ? 'denied' : 'error');
@@ -158,6 +170,35 @@ export default function AdminPage() {
     }
   }
 
+  async function toggleDiscordGateway() {
+    if (!discordStatus?.configured || discordBusy) return;
+    setDiscordBusy(true);
+    setDiscordError('');
+    try {
+      const result = discordStatus.connected
+        ? await api.adminStopDiscord()
+        : await api.adminStartDiscord();
+      setDiscordStatus(result);
+      setNotice(result.connected
+        ? `Compagnon Discord connecté${result.bot?.tag ? ` sous ${result.bot.tag}` : ''}.`
+        : `${result.restoredMics ?? 0} micro(s) rétabli(s). La Gateway Discord est arrêtée.`);
+    } catch (requestError) {
+      setDiscordError(requestError.message);
+      api.adminGetDiscord().then(setDiscordStatus).catch(() => {});
+    } finally {
+      setDiscordBusy(false);
+    }
+  }
+
+  async function refreshDiscordStatus() {
+    setDiscordError('');
+    try {
+      setDiscordStatus(await api.adminGetDiscord());
+    } catch (requestError) {
+      setDiscordError(requestError.message);
+    }
+  }
+
   if (!session) return null;
 
   if (access === 'denied' || access === 'error') {
@@ -179,32 +220,111 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="page meta-page admin-page">
+    <main className="page meta-page admin-page admin-console-page">
       <div className="ambiance ambiance-home on" />
       <NavHeader session={session} />
-      <PageHeading eyebrow="CONSOLE PRIVÉE" title="Administration"
-                   subtitle="Gérez les comptes inscrits sans exposer leurs données d’authentification." />
-
-      <section className="admin-security-strip">
-        <span>🔐</span><div><strong>ACCÈS PROTÉGÉ PAR LE BACKEND</strong><p>Chaque changement exige votre mot de passe actuel et invalide les anciens jetons du joueur.</p></div><b>ADMIN</b>
-      </section>
-
-      <section className="admin-overview">
-        <div><small>COMPTES INSCRITS</small><strong>{total}</strong></div>
-        <div><small>PARTIES · PAGE ACTUELLE</small><strong>{pageStats.games}</strong></div>
-        <div><small>VICTOIRES · PAGE ACTUELLE</small><strong>{pageStats.wins}</strong></div>
-        <div><small>DIAMANTS · PAGE ACTUELLE</small><strong>{pageStats.diamonds}</strong></div>
-      </section>
+      <header className="admin-console-header">
+        <div>
+          <span className="admin-console-kicker">Mafia / Administration</span>
+          <h1>Console d’administration</h1>
+          <p>Pilotez les services, les utilisateurs et les règles du jeu depuis un espace réservé.</p>
+        </div>
+        <div className="admin-console-session">
+          <span><i /> Session sécurisée</span>
+          <strong>{session.username}</strong>
+          <small>Accès vérifié côté serveur</small>
+        </div>
+      </header>
 
       {notice && <div className="admin-notice" role="status"><span>✓</span>{notice}<button onClick={() => setNotice('')}>✕</button></div>}
       {error && !selected && <div className="meta-alert">{error}</div>}
 
-      <section className="card admin-users-card">
+      <div className="admin-dashboard-grid">
+        <section className={`admin-discord-control ${discordStatus?.state ?? 'loading'}`}>
+          <header>
+            <div className="admin-discord-title">
+              <span className="admin-discord-mark">D</span>
+              <div>
+                <small>Service temps réel</small>
+                <h2>Compagnon Discord</h2>
+              </div>
+            </div>
+            <span className={`admin-service-status ${discordStatus?.state ?? 'loading'}`}>
+              <i /> {discordStateLabels[discordStatus?.state] ?? 'Chargement…'}
+            </span>
+          </header>
+
+          <p className="admin-discord-summary">
+            {discordStatus?.connected
+              ? 'La Gateway est active. Les commandes, messages privés et actions vocales sont disponibles.'
+              : 'Activez la Gateway uniquement pendant vos sessions de jeu afin de laisser Railway dormir le reste du temps.'}
+          </p>
+
+          <div className="admin-discord-metrics">
+            <div><small>Bot</small><strong>{discordStatus?.bot?.tag ?? '—'}</strong></div>
+            <div><small>Sessions</small><strong>{discordStatus?.activeSessions ?? 0}</strong></div>
+            <div><small>Parties liées</small><strong>{discordStatus?.synchronizedGames ?? 0}</strong></div>
+            <div><small>MP en attente</small><strong>{discordStatus?.queuedDms ?? 0}</strong></div>
+          </div>
+
+          <div className="admin-discord-config" aria-label="Configuration Discord">
+            {[
+              ['guild', 'Serveur'],
+              ['voiceChannel', 'Vocal joueurs'],
+              ['announcementChannel', 'Annonces'],
+              ['spectatorChannel', 'Vocal morts'],
+            ].map(([key, label]) => (
+              <span className={discordStatus?.configuration?.[key] ? 'ready' : 'missing'} key={key}>
+                {discordStatus?.configuration?.[key] ? '✓' : '!'} {label}
+              </span>
+            ))}
+          </div>
+
+          {discordStatus?.connectedAt && (
+            <small className="admin-discord-connected-at">Connecté depuis le {formatDate(discordStatus.connectedAt)}</small>
+          )}
+          {discordError && <div className="admin-discord-error">{discordError}</div>}
+          {!discordStatus?.configured && discordStatus && (
+            <div className="admin-discord-error">Ajoutez DISCORD_BOT_TOKEN aux variables privées du backend.</div>
+          )}
+
+          <footer>
+            <button type="button" className="admin-discord-refresh" onClick={refreshDiscordStatus} disabled={discordBusy}>
+              Actualiser l’état
+            </button>
+            <button
+              type="button"
+              className={`admin-discord-toggle ${discordStatus?.connected ? 'stop' : 'start'}`}
+              onClick={toggleDiscordGateway}
+              disabled={!discordStatus?.configured || discordBusy || ['connecting', 'stopping'].includes(discordStatus?.state)}
+            >
+              {discordBusy
+                ? 'Opération en cours…'
+                : discordStatus?.connected
+                  ? 'Désactiver Discord'
+                  : 'Activer Discord'}
+            </button>
+          </footer>
+        </section>
+
+        <aside className="admin-metric-grid" aria-label="Indicateurs">
+          <div><small>Comptes inscrits</small><strong>{total}</strong><span>Utilisateurs humains</span></div>
+          <div><small>Parties affichées</small><strong>{pageStats.games}</strong><span>Page actuelle</span></div>
+          <div><small>Victoires affichées</small><strong>{pageStats.wins}</strong><span>Page actuelle</span></div>
+          <div><small>Diamants affichés</small><strong>{pageStats.diamonds}</strong><span>Économie visible</span></div>
+        </aside>
+      </div>
+
+      <section className="admin-security-strip">
+        <span>🔐</span><div><strong>Actions administratives protégées</strong><p>Les contrôles sensibles sont vérifiés par le backend et consignés dans les journaux du service.</p></div><b>ADMIN</b>
+      </section>
+
+      <section className="card admin-panel-card admin-users-card">
         <header className="admin-users-heading">
-          <div><small>REGISTRE DES HABITANTS</small><h2>JOUEURS INSCRITS</h2><p>Les comptes bots sont volontairement exclus.</p></div>
+          <div><small>Utilisateurs</small><h2>Joueurs inscrits</h2><p>Recherchez un compte, consultez son activité ou réinitialisez son accès.</p></div>
           <form onSubmit={submitSearch} className="admin-search">
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pseudo ou adresse e-mail" aria-label="Rechercher un utilisateur" />
-            <button type="submit">RECHERCHER</button>
+            <button type="submit">Rechercher</button>
           </form>
         </header>
 
@@ -220,7 +340,7 @@ export default function AdminPage() {
                 <div className="admin-user-stat"><small>ELO</small><b>{user.elo ?? 1000}</b></div>
                 <div className="admin-user-stat"><small>DIAMANTS</small><b>{user.diamonds} 💎</b></div>
                 <div className="admin-password-state"><small>DERNIER CHANGEMENT</small><span>{formatDate(user.passwordChangedAt)}</span></div>
-                <button className="admin-password-button" onClick={() => openPasswordModal(user)}><span>🔑</span> MOT DE PASSE</button>
+                <button className="admin-password-button" onClick={() => openPasswordModal(user)}><span>🔑</span> Mot de passe</button>
               </article>
             );
           })}
@@ -229,17 +349,17 @@ export default function AdminPage() {
 
         <footer className="admin-pagination">
           <span>{total ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} sur ${total}` : '0 compte'}</span>
-          <div><button disabled={page <= 1 || loading} onClick={() => changePage(page - 1)}>← PRÉCÉDENT</button><b>PAGE {page} / {totalPages}</b><button disabled={page >= totalPages || loading} onClick={() => changePage(page + 1)}>SUIVANT →</button></div>
+          <div><button disabled={page <= 1 || loading} onClick={() => changePage(page - 1)}>← Précédent</button><b>Page {page} / {totalPages}</b><button disabled={page >= totalPages || loading} onClick={() => changePage(page + 1)}>Suivant →</button></div>
         </footer>
       </section>
 
       {/* ── Rôles activables ── */}
       {rolesConfig && (
-        <section className="card admin-roles-card">
+        <section className="card admin-panel-card admin-roles-card">
           <header className="admin-users-heading">
             <div>
-              <small>COMPOSITION DES PARTIES</small>
-              <h2>RÔLES EN JEU</h2>
+              <small>Configuration du jeu</small>
+              <h2>Rôles disponibles</h2>
               <p>Un rôle désactivé est remplacé par Citoyen (Ville) ou Mafioso (Mafia) dans les prochaines parties. Les rôles verrouillés garantissent l&apos;équilibre.</p>
             </div>
           </header>
@@ -267,9 +387,9 @@ export default function AdminPage() {
       )}
 
       {/* ── Historique des parties jouées ── */}
-      <section className="card admin-games-card">
+      <section className="card admin-panel-card admin-games-card">
         <header className="admin-users-heading">
-          <div><small>ARCHIVES DE LA VILLE</small><h2>PARTIES JOUÉES</h2><p>Les {games?.length ?? 0} dernières parties archivées, créateur du lobby inclus.</p></div>
+          <div><small>Journal d’activité</small><h2>Parties jouées</h2><p>Les {games?.length ?? 0} dernières parties archivées, créateur du lobby inclus.</p></div>
         </header>
         {games === null && <div className="meta-loading"><span /> Chargement des archives…</div>}
         {games?.length === 0 && <div className="meta-empty"><strong>AUCUNE PARTIE ARCHIVÉE</strong><p>Les archives sont créées à la fin de chaque partie.</p></div>}
@@ -288,7 +408,7 @@ export default function AdminPage() {
                 {g.playerCount} joueurs ({g.humanCount} humain{g.humanCount > 1 ? 's' : ''})
               </small>
             </div>
-            <span className="admin-game-open">DÉTAIL →</span>
+            <span className="admin-game-open">Détail →</span>
           </article>
         ))}
       </section>

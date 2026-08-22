@@ -2803,6 +2803,51 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
 }
 .profile-page .stat-box .value { font-family: 'Barlow Condensed', sans-serif; font-size: 34px; }
 .profile-page .achievement-row { border-radius: 5px; background: rgba(7,9,10,.82); }
+.discord-link-card {
+  display: grid;
+  grid-template-columns: 118px minmax(0,1fr);
+  gap: 28px;
+  align-items: start;
+  padding: 34px;
+  border-color: rgba(88,101,242,.5);
+  background: linear-gradient(135deg, rgba(88,101,242,.13), rgba(6,8,9,.92) 58%) !important;
+}
+.discord-link-mark {
+  display: grid;
+  width: 104px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(128,139,255,.42);
+  border-radius: 28px;
+  background: #5865f2;
+  color: white;
+  box-shadow: 0 18px 48px rgba(39,49,160,.28);
+  font-size: 54px;
+}
+.discord-link-copy > small { color: #9ea7ff; font-size: 9px; font-weight: 900; letter-spacing: 1.8px; }
+.discord-link-copy > h2 { margin: 4px 0 12px; color: #f2f3ff; font-size: 38px; letter-spacing: 1px; }
+.discord-link-copy > p { max-width: 620px; color: var(--text-dim); font-size: 13px; line-height: 1.65; }
+.discord-linked-user { display: flex; align-items: center; gap: 12px; margin: 5px 0 16px; }
+.discord-linked-user > img, .discord-linked-user > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 2px solid rgba(158,167,255,.55);
+  border-radius: 50%;
+  background: rgba(88,101,242,.28);
+  color: white;
+  object-fit: cover;
+  font-size: 20px;
+  font-weight: 800;
+}
+.discord-linked-user b { display: block; font-size: 15px; }
+.discord-linked-user small { display: block; margin-top: 4px; color: #73e29c; font-size: 8px; font-weight: 900; letter-spacing: 1.3px; }
+.discord-link-button, .discord-unlink-button { margin-top: 20px; border-radius: 5px; font-size: 10px; font-weight: 900; letter-spacing: 1.2px; }
+.discord-link-button { border-color: #7c86ff; background: #5865f2; color: white; }
+.discord-link-button:hover:not(:disabled) { background: #6874f8; box-shadow: 0 10px 30px rgba(88,101,242,.25); }
+.discord-unlink-button { border-color: rgba(255,255,255,.15); background: transparent; color: var(--text-dim); }
+.discord-link-message { margin-top: 16px; border-left: 2px solid #8d97ff; padding: 9px 12px; background: rgba(88,101,242,.09); color: var(--text-dim); font-size: 12px; line-height: 1.45; }
 
 /* Waiting room */
 .lobby-wait { max-width: 1040px; }
@@ -3006,6 +3051,8 @@ select { width: auto; font-size: 12px; padding: 6px 10px; }
   .role-guide-grid { grid-template-columns: 1fr; }
   .choice-card { min-height: 285px; padding: 27px 23px; }
   .profile-page .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .discord-link-card { grid-template-columns: 1fr; padding: 24px 20px; }
+  .discord-link-mark { width: 72px; border-radius: 20px; font-size: 38px; }
   .shop-page .avatar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lobby-code-block { flex-wrap: wrap; width: 100%; gap: 8px 14px; }
   .lobby-code-block strong { font-size: 22px; }
@@ -10519,14 +10566,14 @@ body:has(.ui-lab-page) > :is(.theme-toggle, .mobile-nav) { display: none !import
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PUBLIC LOBBY BROWSER + PRIVATE TABLE CREATION
+   LOBBY DIRECTORY + TABLE CREATION
    ═══════════════════════════════════════════════════════════════════════════ */
 .lobby-browser-page { max-width: 1180px; }
-.lobby-entry-grid { grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr); align-items: stretch; }
-.lobby-browser-page .choice-card { min-height: 470px; }
-.lobby-create-card > p,
-.lobby-private-join-card > p { min-height: auto; margin-bottom: 20px; }
-.lobby-create-form { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr 150px; gap: 10px; }
+.lobby-directory-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); align-items: start; gap: 18px; }
+.lobby-create-sidebar { min-width: 0; }
+.lobby-create-sidebar .choice-card { min-height: 470px; }
+.lobby-create-card > p { min-height: auto; margin-bottom: 20px; }
+.lobby-create-form { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr; gap: 10px; }
 .lobby-create-form > label:first-child,
 .lobby-visibility-picker,
 .lobby-create-submit { grid-column: 1 / -1; }
@@ -10575,17 +10622,13 @@ body:has(.ui-lab-page) > :is(.theme-toggle, .mobile-nav) { display: none !import
 .lobby-visibility-picker > button.active > span { color: #67be83; }
 .lobby-visibility-picker > button.active.private { border-color: rgba(201,154,73,.52); background: linear-gradient(110deg, rgba(142,91,27,.16), rgba(255,255,255,.02)); color: #d7ae68; box-shadow: inset 3px 0 #bd8940; }
 .lobby-visibility-picker > button.active.private > span { color: #d1a254; }
-.lobby-capacity-field { grid-column: 2; }
+.lobby-capacity-field { grid-column: 1; }
 .lobby-create-submit { display: flex; min-height: 51px; align-items: center; justify-content: space-between; padding-inline: 16px; font-size: 12px; font-weight: 900; letter-spacing: .7px; }
 .lobby-create-submit b { font-size: 17px; }
-.lobby-private-join-card .join-form { margin-top: 30px; }
-.private-lobby-note { display: flex; align-items: flex-start; gap: 12px; margin-top: 24px; border: 1px solid rgba(201,154,73,.18); border-left: 3px solid #a97633; border-radius: 3px; padding: 14px; background: rgba(132,83,24,.07); }
-.private-lobby-note > span { color: #c99a4d; font-size: 20px; }
-.private-lobby-note strong { display: block; color: #d7b273; font-size: 12px; letter-spacing: .9px; }
-.private-lobby-note p { min-height: 0 !important; margin: 5px 0 0 !important; color: rgba(255,255,255,.55) !important; font-size: 12px !important; line-height: 1.45; }
-.lobby-global-alert { margin: 14px 0 0; }
+.lobby-global-alert { margin: 0 0 14px; }
 
 .public-lobby-browser { margin-top: 20px; overflow: hidden; border: 1px solid rgba(201,154,73,.24); border-radius: 7px; background: linear-gradient(125deg, rgba(65,43,17,.09), transparent 38%), rgba(5,8,9,.94); box-shadow: 0 24px 65px rgba(0,0,0,.32); }
+.lobby-directory-layout > .public-lobby-browser { min-width: 0; margin-top: 0; }
 .public-lobby-browser-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid rgba(255,255,255,.075); padding: 24px 26px; background: linear-gradient(90deg, rgba(201,154,73,.075), transparent 55%); }
 .public-lobby-browser-heading small { color: #b88843; font-size: 11px; font-weight: 900; letter-spacing: 1.4px; }
 .public-lobby-browser-heading h2 { margin-top: 4px; color: #f0e9df; font-family: 'Barlow Condensed', sans-serif; font-size: 34px; line-height: 1; letter-spacing: .8px; }
@@ -10596,6 +10639,7 @@ body:has(.ui-lab-page) > :is(.theme-toggle, .mobile-nav) { display: none !import
 .public-lobby-card-topline i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #55b875; box-shadow: 0 0 9px rgba(85,184,117,.66); }
 .public-browser-status button { min-height: 38px; border-color: rgba(201,154,73,.25); border-radius: 3px; padding: 8px 12px; color: #cba054; font-size: 10px; font-weight: 900; letter-spacing: .55px; }
 .public-lobby-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 11px; padding: 18px; }
+.lobby-directory-layout .public-lobby-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 .public-lobby-card { position: relative; min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.085); border-left: 3px solid #4ea96c; border-radius: 4px; padding: 17px; background: linear-gradient(145deg, rgba(38,66,45,.09), transparent 48%), rgba(255,255,255,.017); transition: border-color .2s, background .2s, transform .2s; }
 .public-lobby-card:hover { border-color: rgba(91,189,122,.42); background: linear-gradient(145deg, rgba(38,110,60,.14), transparent 52%), rgba(255,255,255,.025); transform: translateY(-2px); }
 .public-lobby-index { position: absolute; top: 9px; right: 12px; color: rgba(255,255,255,.07); font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 900; }
@@ -10654,7 +10698,7 @@ body:has(.ui-lab-page) > :is(.theme-toggle, .mobile-nav) { display: none !import
 .ui-lab-public-browser-layer > .public-lobby-browser { width: min(1080px, 100%); margin: auto; background-color: #06090a; box-shadow: 0 30px 100px rgba(0,0,0,.72); }
 
 @media (max-width: 920px) {
-  .lobby-entry-grid { grid-template-columns: 1fr; }
+  .lobby-directory-layout { grid-template-columns: 1fr; }
   .public-lobby-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 @media (max-width: 760px) {
@@ -10967,3 +11011,218 @@ html[data-theme="light"] .game-shell .night-role-stage :is(.night-role-brief, .n
 .device-mobile .night-target-picker-meta { padding-inline: 14px; }
 .device-mobile .night-target-picker-grid { grid-template-columns: 1fr; max-height: 310px; padding: 10px 14px; }
 .device-mobile .night-target-picker-modal > footer { padding: 9px 14px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN OPERATIONS CONSOLE — neutral typography and service-first layout
+   ═══════════════════════════════════════════════════════════════════════════ */
+.admin-console-page {
+  --admin-bg: #08101a;
+  --admin-panel: #0d1723;
+  --admin-panel-soft: #111e2c;
+  --admin-border: #26384a;
+  --admin-border-soft: #1d2b39;
+  --admin-text: #edf4fa;
+  --admin-muted: #91a1b2;
+  --admin-blue: #62aaf5;
+  --admin-blue-soft: rgba(61,143,230,.13);
+  --admin-green: #4fc38b;
+  --admin-red: #e06b6b;
+  --admin-amber: #dfad61;
+  max-width: 1420px;
+  color: var(--admin-text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+.admin-console-page *,
+.admin-console-page :is(button, input, select, textarea) {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+.admin-console-page .ambiance { opacity: .16; filter: saturate(.32) contrast(1.05); }
+.admin-console-page :is(h1, h2, h3, strong, b) { font-family: inherit; }
+.admin-console-page > :not(.ambiance) { position: relative; z-index: 1; }
+
+.admin-console-header {
+  display: flex;
+  min-height: 156px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin: 4px 0 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  padding: 28px 30px;
+  background: linear-gradient(120deg, rgba(49,112,174,.15), transparent 52%), rgba(8,16,26,.94);
+  box-shadow: 0 20px 55px rgba(0,0,0,.25);
+}
+.admin-console-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--admin-blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .9px;
+}
+.admin-console-header h1 { margin: 0; color: var(--admin-text); font-size: clamp(34px,4vw,48px); font-weight: 700; line-height: 1.05; letter-spacing: -.8px; text-transform: none; }
+.admin-console-header p { max-width: 680px; margin-top: 10px; color: var(--admin-muted); font-size: 14px; line-height: 1.55; }
+.admin-console-session { display: grid; min-width: 215px; border-left: 1px solid var(--admin-border); padding: 4px 0 4px 24px; }
+.admin-console-session > span { display: flex; align-items: center; gap: 8px; color: var(--admin-green); font-size: 11px; font-weight: 700; }
+.admin-console-session > span i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 12px currentColor; }
+.admin-console-session strong { margin-top: 8px; color: var(--admin-text); font-size: 17px; font-weight: 650; }
+.admin-console-session small { margin-top: 3px; color: var(--admin-muted); font-size: 11px; }
+
+.admin-dashboard-grid { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(360px,.75fr); gap: 14px; margin-bottom: 14px; }
+.admin-discord-control {
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  padding: 22px;
+  background: linear-gradient(135deg, rgba(88,101,242,.14), transparent 47%), var(--admin-panel);
+  box-shadow: 0 18px 46px rgba(0,0,0,.22);
+}
+.admin-discord-control > header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.admin-discord-title { display: flex; align-items: center; gap: 13px; }
+.admin-discord-mark { display: grid; width: 46px; aspect-ratio: 1; place-items: center; border: 1px solid rgba(145,154,255,.55); border-radius: 13px; background: #5865f2; color: white; box-shadow: 0 10px 28px rgba(49,58,176,.3); font-size: 21px; font-weight: 800; }
+.admin-discord-title small { display: block; color: #aeb5ff; font-size: 10px; font-weight: 700; letter-spacing: .65px; }
+.admin-discord-title h2 { margin-top: 3px; color: var(--admin-text); font-size: 23px; font-weight: 700; letter-spacing: -.2px; }
+.admin-service-status { display: inline-flex; min-height: 34px; align-items: center; gap: 8px; border: 1px solid var(--admin-border); border-radius: 999px; padding: 7px 12px; color: var(--admin-muted); background: rgba(255,255,255,.025); font-size: 11px; font-weight: 700; }
+.admin-service-status i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.admin-service-status.connected { border-color: rgba(79,195,139,.42); color: var(--admin-green); background: rgba(79,195,139,.08); }
+.admin-service-status.connected i { box-shadow: 0 0 11px currentColor; }
+.admin-service-status.connecting,
+.admin-service-status.stopping { border-color: rgba(223,173,97,.4); color: var(--admin-amber); }
+.admin-service-status.error,
+.admin-service-status.unconfigured { border-color: rgba(224,107,107,.4); color: var(--admin-red); }
+.admin-discord-summary { max-width: 760px; margin: 18px 0; color: var(--admin-muted); font-size: 13px; line-height: 1.55; }
+.admin-discord-metrics { display: grid; grid-template-columns: 1.4fr repeat(3,1fr); overflow: hidden; border: 1px solid var(--admin-border-soft); border-radius: 9px; background: rgba(3,8,13,.3); }
+.admin-discord-metrics > div { min-width: 0; border-right: 1px solid var(--admin-border-soft); padding: 12px 14px; }
+.admin-discord-metrics > div:last-child { border-right: 0; }
+.admin-discord-metrics small { display: block; color: var(--admin-muted); font-size: 10px; }
+.admin-discord-metrics strong { display: block; overflow: hidden; margin-top: 5px; color: var(--admin-text); font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.admin-discord-config { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.admin-discord-config span { border: 1px solid var(--admin-border); border-radius: 6px; padding: 6px 9px; color: var(--admin-muted); background: rgba(255,255,255,.02); font-size: 10px; font-weight: 650; }
+.admin-discord-config span.ready { border-color: rgba(79,195,139,.3); color: #79d5a7; background: rgba(79,195,139,.06); }
+.admin-discord-config span.missing { border-color: rgba(224,107,107,.3); color: #e79a9a; background: rgba(224,107,107,.06); }
+.admin-discord-connected-at { display: block; margin-top: 11px; color: var(--admin-muted); font-size: 10px; }
+.admin-discord-error { margin-top: 12px; border: 1px solid rgba(224,107,107,.35); border-radius: 7px; padding: 9px 11px; color: #efaaaa; background: rgba(138,44,44,.1); font-size: 12px; line-height: 1.45; }
+.admin-discord-control > footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px; border-top: 1px solid var(--admin-border-soft); padding-top: 15px; }
+.admin-discord-control > footer button { min-height: 42px; border-radius: 7px; padding: 9px 14px; font-size: 12px; font-weight: 650; letter-spacing: 0; }
+.admin-discord-refresh { border-color: var(--admin-border); color: var(--admin-muted); background: transparent; }
+.admin-discord-toggle.start { border-color: #438dd8; background: #2f78bf; color: white; }
+.admin-discord-toggle.stop { border-color: rgba(224,107,107,.6); background: rgba(168,53,53,.16); color: #f0a0a0; }
+.admin-discord-toggle.start:hover:not(:disabled) { background: #3d8bd7; }
+.admin-discord-toggle.stop:hover:not(:disabled) { background: rgba(181,61,61,.26); }
+
+.admin-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.admin-metric-grid > div { display: flex; min-height: 132px; flex-direction: column; justify-content: flex-end; border: 1px solid var(--admin-border); border-radius: 12px; padding: 17px; background: var(--admin-panel); box-shadow: 0 14px 35px rgba(0,0,0,.16); }
+.admin-metric-grid small { color: var(--admin-muted); font-size: 11px; }
+.admin-metric-grid strong { margin: 8px 0 4px; color: var(--admin-text); font-size: 30px; font-weight: 700; line-height: 1; }
+.admin-metric-grid span { color: #65788a; font-size: 10px; }
+
+.admin-console-page .admin-security-strip { min-height: 64px; grid-template-columns: 38px minmax(0,1fr) auto; border-color: var(--admin-border); border-radius: 10px; background: rgba(13,23,35,.88); }
+.admin-console-page .admin-security-strip > span { width: 35px; border: 0; background: var(--admin-blue-soft); font-size: 16px; }
+.admin-console-page .admin-security-strip strong { color: var(--admin-text); font-size: 12px; font-weight: 650; letter-spacing: 0; }
+.admin-console-page .admin-security-strip p { color: var(--admin-muted); font-size: 11px; }
+.admin-console-page .admin-security-strip > b { border-color: var(--admin-border); border-radius: 5px; color: var(--admin-blue); font-size: 10px; font-weight: 700; }
+
+.admin-console-page .admin-notice { border-color: rgba(79,195,139,.34); border-radius: 9px; background: rgba(79,195,139,.09); color: #b7e8d0; }
+.admin-console-page .admin-panel-card { margin-top: 14px; border: 1px solid var(--admin-border) !important; border-radius: 14px; background: rgba(13,23,35,.94) !important; box-shadow: 0 18px 45px rgba(0,0,0,.18); }
+.admin-console-page .admin-users-heading { min-height: 96px; border-color: var(--admin-border-soft); padding: 20px 22px; background: rgba(17,30,44,.58); }
+.admin-console-page .admin-users-heading > div > small { color: var(--admin-blue); font-size: 10px; font-weight: 700; letter-spacing: .65px; text-transform: none; }
+.admin-console-page .admin-users-heading h2 { margin-top: 5px; color: var(--admin-text); font-size: 24px; font-weight: 700; letter-spacing: -.2px; text-transform: none; }
+.admin-console-page .admin-users-heading p { margin-top: 5px; color: var(--admin-muted); font-size: 12px; }
+.admin-console-page .admin-search { width: min(470px,45%); }
+.admin-console-page .admin-search input { border-color: var(--admin-border); border-radius: 7px; background: #09111b; color: var(--admin-text); }
+.admin-console-page .admin-search button { border-color: #3c7fbd; border-radius: 7px; background: #225f96; color: white; font-size: 12px; font-weight: 650; letter-spacing: 0; }
+.admin-console-page .admin-user-row { grid-template-columns: 52px minmax(190px,1.45fr) repeat(4,minmax(72px,.48fr)) minmax(125px,.65fr) 140px; border-color: var(--admin-border-soft); padding: 13px 17px; }
+.admin-console-page .admin-user-row:hover { border-color: #31506d; background: rgba(78,142,201,.055); }
+.admin-console-page .admin-user-avatar { border-color: #36526b; background: #152638; color: #9bc8f1; font-size: 16px; font-weight: 700; }
+.admin-console-page .admin-user-identity strong { color: var(--admin-text); font-size: 14px; font-weight: 650; }
+.admin-console-page .admin-user-identity small { color: var(--admin-muted); font-size: 11px; }
+.admin-console-page .admin-user-identity em { color: #667789; font-size: 9px; font-weight: 600; letter-spacing: .3px; }
+.admin-console-page .admin-user-stat { border-color: var(--admin-border-soft); }
+.admin-console-page :is(.admin-user-stat small, .admin-password-state small) { color: #718295; font-size: 9px; font-weight: 650; letter-spacing: .4px; }
+.admin-console-page .admin-user-stat b { color: #dce7f1; font-size: 19px; font-weight: 650; }
+.admin-console-page .admin-user-stat b i { color: var(--admin-green); font-size: 9px; }
+.admin-console-page .admin-password-state span { color: var(--admin-muted); font-size: 10px; }
+.admin-console-page .admin-password-button { border-color: #36506a; border-radius: 7px; color: #a9c9e7; background: rgba(44,91,132,.09); font-size: 11px; font-weight: 650; letter-spacing: 0; }
+.admin-console-page .admin-pagination { border-radius: 0 0 14px 14px; background: #0a131e; }
+.admin-console-page .admin-pagination > span { color: var(--admin-muted); }
+.admin-console-page .admin-pagination button { border-color: var(--admin-border); border-radius: 6px; color: #a9bdd0; font-size: 11px; }
+.admin-console-page .admin-pagination b { color: var(--admin-blue); font-size: 10px; letter-spacing: 0; text-transform: none; }
+
+.admin-console-page .admin-roles-group { padding-inline: 22px; }
+.admin-console-page .admin-roles-group:first-of-type { margin-top: 19px; }
+.admin-console-page .admin-role-chip { border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0; }
+.admin-console-page .admin-games-card { overflow: hidden; padding: 0 !important; }
+.admin-console-page .admin-game-row { margin: 10px 18px; border-color: var(--admin-border-soft); border-radius: 8px; padding: 12px 14px; background: rgba(6,12,19,.28); }
+.admin-console-page .admin-game-row:hover { border-color: #376187; background: var(--admin-blue-soft); }
+.admin-console-page .admin-game-winner { font-size: 10px; font-weight: 650; letter-spacing: .4px; }
+.admin-console-page .admin-game-main strong { color: var(--admin-text); font-size: 13px; font-weight: 650; }
+.admin-console-page .admin-game-main small { color: var(--admin-muted); font-size: 11px; }
+.admin-console-page .admin-game-open { color: var(--admin-blue); font-size: 11px; font-weight: 650; letter-spacing: 0; }
+
+.admin-console-page .admin-password-modal > form,
+.admin-console-page .admin-game-detail { border-color: var(--admin-border); border-radius: 13px; background: var(--admin-panel); }
+.admin-console-page .admin-password-modal form > header { border-color: var(--admin-border-soft); background: var(--admin-panel-soft); }
+.admin-console-page .admin-password-modal header h2,
+.admin-console-page .admin-game-detail header h2 { color: var(--admin-text); font-size: 22px; font-weight: 700; }
+
+html[data-theme="light"] .admin-console-page {
+  --admin-bg: #eef3f7;
+  --admin-panel: #fff;
+  --admin-panel-soft: #f4f7fa;
+  --admin-border: #c8d3dc;
+  --admin-border-soft: #dce4ea;
+  --admin-text: #17222d;
+  --admin-muted: #596b7b;
+  --admin-blue: #236cae;
+  --admin-blue-soft: rgba(35,108,174,.08);
+}
+html[data-theme="light"] .admin-console-page .ambiance { opacity: .04; }
+html[data-theme="light"] .admin-console-header,
+html[data-theme="light"] .admin-discord-control,
+html[data-theme="light"] .admin-metric-grid > div,
+html[data-theme="light"] .admin-console-page .admin-panel-card,
+html[data-theme="light"] .admin-console-page .admin-security-strip { background-color: var(--admin-panel) !important; color: var(--admin-text); }
+html[data-theme="light"] .admin-console-page .admin-search input { background: #fff; color: var(--admin-text); }
+html[data-theme="light"] .admin-discord-metrics { background: #f7f9fb; }
+html[data-theme="light"] .admin-console-page .admin-user-row:hover { background: #f2f7fb; }
+html[data-theme="light"] .admin-console-page .admin-pagination { background: #f4f7fa; }
+
+@media (max-width: 1080px) {
+  .admin-dashboard-grid { grid-template-columns: 1fr; }
+  .admin-metric-grid { grid-template-columns: repeat(4,1fr); }
+  .admin-metric-grid > div { min-height: 104px; }
+  .admin-console-page .admin-user-row { grid-template-columns: 48px minmax(180px,1.4fr) repeat(3,minmax(70px,.45fr)) 135px; }
+  .admin-console-page .admin-user-stat:nth-of-type(4),
+  .admin-console-page .admin-password-state { display: none; }
+}
+@media (max-width: 820px) {
+  .admin-console-header { align-items: flex-start; flex-direction: column; min-height: 0; padding: 23px; }
+  .admin-console-session { width: 100%; border-top: 1px solid var(--admin-border); border-left: 0; padding: 16px 0 0; }
+  .admin-discord-metrics { grid-template-columns: 1fr 1fr; }
+  .admin-discord-metrics > div:nth-child(2) { border-right: 0; }
+  .admin-discord-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--admin-border-soft); }
+  .admin-metric-grid { grid-template-columns: 1fr 1fr; }
+  .admin-console-page .admin-users-heading { align-items: stretch; flex-direction: column; }
+  .admin-console-page .admin-search { width: 100%; }
+  .admin-console-page .admin-user-row { grid-template-columns: 46px minmax(0,1fr) 132px; }
+  .admin-console-page .admin-user-stat { display: none; }
+  .admin-console-page .admin-password-button { grid-column: 3; }
+}
+@media (max-width: 560px) {
+  .admin-console-header { padding: 20px 17px; }
+  .admin-console-header h1 { font-size: 31px; }
+  .admin-console-header p { font-size: 12px; }
+  .admin-discord-control { padding: 17px; }
+  .admin-discord-control > header { align-items: flex-start; flex-direction: column; }
+  .admin-discord-control > footer { align-items: stretch; flex-direction: column-reverse; }
+  .admin-discord-control > footer button { width: 100%; }
+  .admin-metric-grid > div { min-height: 95px; padding: 13px; }
+  .admin-metric-grid strong { font-size: 25px; }
+  .admin-console-page .admin-security-strip { grid-template-columns: 35px minmax(0,1fr); }
+  .admin-console-page .admin-security-strip > b { display: none; }
+  .admin-console-page .admin-user-row { min-height: 126px; grid-template-columns: 42px minmax(0,1fr); }
+  .admin-console-page .admin-password-button { grid-column: 1 / -1; }
+  .admin-console-page .admin-games-card { padding-bottom: 5px !important; }
+  .admin-console-page .admin-game-row { margin-inline: 10px; }
+}

@@ -18,16 +18,80 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState([]);
   const [history, setHistory]     = useState([]);
   const [tab, setTab]             = useState(0);
+  const [discordBusy, setDiscordBusy] = useState(false);
+  const [discordMessage, setDiscordMessage] = useState('');
 
   useEffect(() => {
     const s = getSession();
     if (!s) { router.replace('/'); return; }
     setSession(s);
-    api.profile().then(setProfile).catch(() => {});
     api.getStats().then(setStats).catch(() => {});
     api.getAchievements().then(setAchievements).catch(() => {});
     api.getHistory().then(setHistory).catch(() => {});
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const discordError = params.get('error');
+    if (discordError) {
+      api.profile().then(setProfile).catch(() => {});
+      setTab(3);
+      setDiscordMessage('La liaison Discord a été annulée.');
+      window.history.replaceState(null, '', '/profile');
+    } else if (code && state) {
+      setTab(3);
+      setDiscordBusy(true);
+      api.discordCompleteLink(code, state)
+        .then(async (linked) => {
+          const updatedProfile = await api.profile().catch(() => linked);
+          setProfile(updatedProfile);
+          setDiscordMessage(linked.dmDelivered
+            ? 'Compte lié — un message privé de confirmation vient de vous être envoyé.'
+            : 'Compte lié. Les messages privés Discord semblent fermés ou le bot n’est pas encore connecté.');
+        })
+        .catch((error) => setDiscordMessage(error.message || 'Impossible de lier ce compte Discord.'))
+        .finally(() => {
+          setDiscordBusy(false);
+          window.history.replaceState(null, '', '/profile');
+        });
+    } else {
+      api.profile().then(setProfile).catch(() => {});
+    }
   }, [router]);
+
+  const connectDiscord = async () => {
+    setDiscordBusy(true);
+    setDiscordMessage('');
+    try {
+      const { authorizationUrl } = await api.discordAuthorize();
+      window.location.assign(authorizationUrl);
+    } catch (error) {
+      setDiscordMessage(error.message || 'Impossible de démarrer la liaison Discord.');
+      setDiscordBusy(false);
+    }
+  };
+
+  const disconnectDiscord = async () => {
+    if (!window.confirm('Dissocier ce compte Discord ? Vous ne recevrez plus les messages privés du jeu.')) return;
+    setDiscordBusy(true);
+    setDiscordMessage('');
+    try {
+      await api.discordUnlink();
+      setProfile((current) => ({
+        ...current,
+        discordUserId: null,
+        discordUsername: null,
+        discordAvatar: null,
+        discordAvatarUrl: null,
+        discordLinkedAt: null,
+      }));
+      setDiscordMessage('Compte Discord dissocié.');
+    } catch (error) {
+      setDiscordMessage(error.message || 'Impossible de dissocier Discord.');
+    } finally {
+      setDiscordBusy(false);
+    }
+  };
 
   if (!session) return null;
 
@@ -45,7 +109,7 @@ export default function ProfilePage() {
 
       {/* Tabs */}
       <div className="meta-tabs">
-        {['STATISTIQUES', `SUCCÈS (${unlocked.length}/${achievements.length})`, 'HISTORIQUE'].map((l, i) => (
+        {['STATISTIQUES', `SUCCÈS (${unlocked.length}/${achievements.length})`, 'HISTORIQUE', 'CONNEXIONS'].map((l, i) => (
           <button key={i} className={tab === i ? 'active' : ''}
                   onClick={() => setTab(i)}>{l}</button>
         ))}
@@ -134,6 +198,39 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* ── Connections ── */}
+      {tab === 3 && (
+        <section className="card discord-link-card">
+          <div className="discord-link-mark" aria-hidden="true">◉</div>
+          <div className="discord-link-copy">
+            <small>COMPAGNON DE PARTIE</small>
+            <h2>DISCORD</h2>
+            {profile?.discordUserId ? (
+              <>
+                <div className="discord-linked-user">
+                  {profile.discordAvatarUrl
+                    ? <img src={profile.discordAvatarUrl} alt="" />
+                    : <span>{(profile.discordUsername ?? 'D')[0]}</span>}
+                  <div><b>{profile.discordUsername}</b><small>COMPTE LIÉ ET PRÊT</small></div>
+                </div>
+                <p>Le bot peut vous identifier dans le vocal et vous envoyer en privé votre rôle, les visites, blocages, résultats d’enquête, protections et éliminations.</p>
+                <button type="button" className="discord-unlink-button" disabled={discordBusy} onClick={disconnectDiscord}>
+                  DISSOCIER DISCORD
+                </button>
+              </>
+            ) : (
+              <>
+                <p>Liez votre compte pour que le bot sache quelle personne Discord correspond à votre joueur PC. Seule votre identité publique Discord est demandée.</p>
+                <button type="button" className="discord-link-button" disabled={discordBusy} onClick={connectDiscord}>
+                  {discordBusy ? 'CONNEXION…' : 'LIER MON COMPTE DISCORD'}
+                </button>
+              </>
+            )}
+            {discordMessage && <div className="discord-link-message" role="status">{discordMessage}</div>}
+          </div>
+        </section>
       )}
     </main>
   );
