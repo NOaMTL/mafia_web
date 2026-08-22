@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getSession } from '@/lib/api';
-import { ROLE_GUIDE, PHASE_GUIDE, ROLE_DISTRIBUTIONS, ROLE_MECHANICS, WIN_CONDITIONS } from '@/lib/roleGuide';
+import { ROLE_GUIDE, PHASE_GUIDE, ROLE_DISTRIBUTIONS, WIN_CONDITIONS } from '@/lib/roleGuide';
 import NavHeader from '@/components/NavHeader';
 import PageHeading from '@/components/PageHeading';
 import RoleIcon from '@/components/RoleIcon';
+import RoleDetailsModal from '@/components/RoleDetailsModal';
 
 export default function GuidePage() {
   const [session, setSession] = useState(null);
@@ -15,21 +16,6 @@ export default function GuidePage() {
   useEffect(() => {
     setSession(getSession());
   }, []);
-
-  // Fermeture au clavier (Échap).
-  useEffect(() => {
-    if (!openRole) return;
-    const onKey = (e) => e.key === 'Escape' && setOpenRole(null);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [openRole]);
-
-  const openRoleFacts = openRole ? (ROLE_MECHANICS[openRole.key] ?? []) : [];
 
   return (
     <main className="page meta-page guide-page">
@@ -94,74 +80,7 @@ export default function GuidePage() {
         </>
       )}
 
-      {/* ── Modale : mécaniques détaillées du rôle ── */}
-      {openRole && (
-        <div className="role-modal-backdrop" onClick={() => setOpenRole(null)}>
-          <section className="role-modal" style={{ '--role-color': openRole.color }}
-                   role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
-                   onClick={(e) => e.stopPropagation()}>
-            <button className="role-modal-close" aria-label="Fermer le dossier"
-                    onClick={() => setOpenRole(null)}>✕</button>
-
-            <div className="role-modal-visual">
-              <img src={openRole.image} alt="" />
-              <div className="role-modal-visual-shade" />
-              <div className="role-modal-visual-top">
-                <span className="role-modal-team"><i />{openRole.team === 'MAFIA' ? 'MAFIA' : 'VILLE'}</span>
-                <span>ARCHIVES · {openRole.key}</span>
-              </div>
-              <div className="role-modal-visual-signature">
-                <RoleIcon roleKey={openRole.key} className="role-modal-emblem" />
-                <div>
-                  <small>DOSSIER CONFIDENTIEL</small>
-                  <strong>{openRole.name}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="role-modal-content">
-              <header className="role-modal-header">
-                <span className="role-modal-eyebrow">PROFIL DU RÔLE</span>
-                <h2 id="role-modal-title">{openRole.name}</h2>
-                <p className="role-modal-desc">{openRole.description}</p>
-              </header>
-
-              <div className={`role-modal-mission ${openRole.nightAction ? 'night' : 'passive'}`}>
-                <span className="role-modal-mission-icon">{openRole.nightAction ? '☾' : '◇'}</span>
-                <div>
-                  <small>{openRole.nightAction ? 'MISSION NOCTURNE' : 'RÔLE PASSIF'}</small>
-                  <strong>{openRole.nightAction ?? 'Aucune action à effectuer pendant la nuit.'}</strong>
-                </div>
-              </div>
-
-              <div className="role-modal-section-title">
-                <span>MÉCANIQUES & INTERACTIONS</span>
-                <b>{String(openRoleFacts.length).padStart(2, '0')}</b>
-              </div>
-              <div className="role-facts">
-                {openRoleFacts.map((f, i) => (
-                  <div key={i} className="role-fact">
-                    <span className="role-fact-number">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="role-fact-icon">{f.icon}</span>
-                    <div>
-                      <div className="role-fact-title">{f.title}</div>
-                      <div className="role-fact-text">{f.text}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <aside className="role-modal-tip">
-                <span>♟</span>
-                <div>
-                  <small>CONSEIL STRATÉGIQUE</small>
-                  <p>{openRole.tip}</p>
-                </div>
-              </aside>
-            </div>
-          </section>
-        </div>
-      )}
+      <RoleDetailsModal role={openRole} onClose={() => setOpenRole(null)} />
 
       {tab === 1 && (
         <div className="phase-timeline">

@@ -9,6 +9,7 @@ import ConnectionBanner from '@/components/ConnectionBanner';
 import BrandMark from '@/components/BrandMark';
 import PageHeading from '@/components/PageHeading';
 import RoleIcon from '@/components/RoleIcon';
+import RoleDetailsModal from '@/components/RoleDetailsModal';
 import { ROLE_GUIDE, ROLE_DISTRIBUTIONS } from '@/lib/roleGuide';
 
 export default function LobbyWait() {
@@ -23,6 +24,7 @@ export default function LobbyWait() {
   const [chatMsgs, setChatMsgs] = useState([]);
   const [chatText, setChatText] = useState('');
   const [sideTab, setSideTab]   = useState('roles');
+  const [openRole, setOpenRole] = useState(null);
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const leaveSentRef = useRef(false);
@@ -47,6 +49,7 @@ export default function LobbyWait() {
     socket.on('lobby:bot_added',     refresh);
     socket.on('lobby:player_kicked', refresh);
     socket.on('lobby:player_left',   refresh);
+    socket.on('lobby:host_changed',  refresh);
     // Le joueur exclu est renvoyé à la liste des parties.
     socket.on('lobby:kicked', (d) => {
       leaveSentRef.current = true;
@@ -80,6 +83,7 @@ export default function LobbyWait() {
     return () => {
       ['lobby:joined', 'lobby:player_joined', 'lobby:player_ready',
        'lobby:bot_added', 'lobby:player_kicked', 'lobby:player_left',
+       'lobby:host_changed',
        'lobby:kicked', 'lobby:closed',
        'lobby:chat_message', 'game:started', 'error',
       ].forEach((e) => socket.off(e));
@@ -139,9 +143,13 @@ export default function LobbyWait() {
     if (leaveSentRef.current) return true;
     const isHost = session?.userId === lobby?.hostId;
     const otherPlayers = (lobby?.players ?? []).filter((player) => player.userId !== session?.userId);
-    if (isHost && otherPlayers.length > 0 && !window.confirm(
-      `Fermer ce salon ?\n\nLes ${otherPlayers.length} autre${otherPlayers.length > 1 ? 's' : ''} participant${otherPlayers.length > 1 ? 's' : ''} seront expulsés.`,
-    )) return false;
+    const otherHumans = otherPlayers.filter((player) => !player.isBot);
+    if (isHost) {
+      const message = otherHumans.length > 0
+        ? `Quitter ce salon ?\n\nLe rôle d’hôte sera automatiquement transmis à un autre joueur.`
+        : `Fermer ce salon ?\n\nIl ne reste aucun autre joueur humain : le salon et ses bots seront supprimés.`;
+      if (!window.confirm(message)) return false;
+    }
     leaveSentRef.current = true;
     socketRef.current?.emit('lobby:leave', { lobbyId: id });
     return true;
@@ -177,6 +185,7 @@ export default function LobbyWait() {
   const townRoles = groupedRoles.filter((item) => item.team === 'TOWN');
   const maxPlayers = lobby.maxPlayers ?? 15;
   const freeSlots = Math.max(0, maxPlayers - players.length);
+  const canTransferHost = players.some((player) => player.userId !== session.userId && !player.isBot);
   const orderedPlayers = [...players].sort((a, b) => {
     if (a.userId === lobby.hostId) return -1;
     if (b.userId === lobby.hostId) return 1;
@@ -190,7 +199,11 @@ export default function LobbyWait() {
       <div className="ambiance ambiance-home on" />
       <div className="lobby-wait-nav">
         <BrandMark href="/lobby" compact onClick={(event) => { if (!prepareLobbyExit()) event.preventDefault(); }} />
-        <button onClick={leaveLobby}>{session.userId === lobby.hostId ? 'FERMER LA SALLE' : 'QUITTER LA SALLE'}</button>
+        <button onClick={leaveLobby}>
+          {session.userId === lobby.hostId
+            ? canTransferHost ? 'QUITTER · TRANSMETTRE' : 'FERMER LA SALLE'
+            : 'QUITTER LA SALLE'}
+        </button>
       </div>
       <PageHeading eyebrow="LA TABLE SE PRÉPARE" title="SALLE D’ATTENTE"
                    subtitle="Invitez les derniers joueurs et signalez-vous prêt." />
@@ -332,11 +345,11 @@ export default function LobbyWait() {
               <div className="lobby-role-groups">
                 <div className="lobby-role-team mafia">
                   <div className="role-team-heading"><span>◆ MAFIA</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'MAFIA').length}</b></div>
-                  <div>{mafiaRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
+                  <div>{mafiaRoles.map((item) => <LobbyRoleCard key={item.key} role={item} onOpen={() => setOpenRole(item)} />)}</div>
                 </div>
                 <div className="lobby-role-team town">
                   <div className="role-team-heading"><span>✦ VILLAGE</span><b>{rolePreview.filter((key) => ROLE_GUIDE.find((role) => role.key === key)?.team === 'TOWN').length}</b></div>
-                  <div>{townRoles.map((item) => <LobbyRoleCard key={item.key} role={item} />)}</div>
+                  <div>{townRoles.map((item) => <LobbyRoleCard key={item.key} role={item} onOpen={() => setOpenRole(item)} />)}</div>
                 </div>
               </div>
               {players.length < 4 && <div className="composition-warning">Encore {4 - players.length} joueur{4 - players.length > 1 ? 's' : ''} requis. La composition affichée est un aperçu.</div>}
@@ -359,16 +372,29 @@ export default function LobbyWait() {
           )}
         </aside>
       </div>
+
+      <RoleDetailsModal role={openRole} onClose={() => setOpenRole(null)} />
     </main>
   );
 }
 
-function LobbyRoleCard({ role }) {
+function LobbyRoleCard({ role, onOpen }) {
   return (
-    <article className="lobby-role-card" style={{ '--role-color': role.color }}>
+    <button
+      type="button"
+      className="lobby-role-card"
+      style={{ '--role-color': role.color }}
+      aria-haspopup="dialog"
+      aria-label={`Voir le dossier du rôle ${role.name}`}
+      title={`Voir le dossier de ${role.name}`}
+      onClick={onOpen}
+    >
       <RoleIcon roleKey={role.key} className="role-emoji" />
       <div><strong>{role.name}</strong><small>{role.nightAction ? 'ACTION NOCTURNE' : 'POUVOIR PASSIF'}</small></div>
-      {role.count > 1 && <b className="role-quantity">×{role.count}</b>}
-    </article>
+      <span className="lobby-role-card-end">
+        {role.count > 1 && <b className="role-quantity">×{role.count}</b>}
+        <span className="role-open-arrow" aria-hidden="true">→</span>
+      </span>
+    </button>
   );
 }
